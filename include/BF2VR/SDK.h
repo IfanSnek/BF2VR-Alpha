@@ -1,6 +1,6 @@
 #pragma once
 #include "Globals.h"
-#include "SigScan/SigScan.h"
+//#include "SigScan/SigScan.h"
 
 static const DWORD64 OffsetCamera = 0x1410c7010;
 static const DWORD64 OffsetGameRenderer = 0x143ffbe10;

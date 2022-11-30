@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string>
 #include <iostream>
+#include <sstream>
 #include <fstream>
 #include "Globals.h"
 #include "HookHelper.h"
@@ -95,13 +96,10 @@ bool GetVectors(vr::ETrackedDeviceClass device, Vec3& Loc, Vec4& Rot, vr::HmdMat
     }
 }
 
-#define PI 3.14159265358979323846
 Vec3 eulerFromQuat(Vec4 q)
 {
+    #define PI 3.14159265358979323846
     Vec3 v;
-
-    // http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToEuler/index.htm
-    // Conversion of the code under Code, Java code to do conversion:
 
     double test = q.x * q.y + q.z * q.w;
     if (test > 0.499)
@@ -249,13 +247,13 @@ void UpdateCamera(Vec3 Loc, vr::HmdMatrix34_t Rot, float yaw, float pitch) {
         }
         p2->pitch = pitch;
         p2->yaw = yaw;
+    }
 
-        if (!lefteye) {
-            out.o.x += 0.0012;
-        }
-        else {
-            out.o.x -= 0.0012;
-        }
+    if (lefteye) {
+        out.o.x += 0.00065;
+    }
+    else {
+        out.o.x -= 0.00065;
     }
 
     g_Transform = out;
@@ -267,43 +265,42 @@ HRESULT (*Present)(IDXGISwapChain* pInstance, UINT SyncInterval, UINT Flags) = n
 HRESULT PresentHook(IDXGISwapChain* pInstance, UINT SyncInterval, UINT Flags)
 {
 
-    if (IsValidPtr(m_pHMD)) {
-        if (DXReady)
+    if (IsValidPtr(m_pHMD) && DXReady) {
+
+        if (lefteye) {
+            vr::TrackedDevicePose_t rawPoses[vr::k_unMaxTrackedDeviceCount];
+            vr::VRCompositor()->WaitGetPoses(rawPoses, vr::k_unMaxTrackedDeviceCount, NULL, 0);
+        }
+
+        ID3D11Texture2D* texture;
+        HRESULT hr = pInstance->GetBuffer(0, IID_PPV_ARGS(&texture));
+        if (SUCCEEDED(hr))
         {
+            vr::Texture_t eye = { (void*)texture, vr::TextureType_DirectX, vr::ColorSpace_Gamma };
 
+            vr::VRTextureBounds_t bounds;
             if (lefteye) {
-                vr::TrackedDevicePose_t rawPoses[vr::k_unMaxTrackedDeviceCount];
-                vr::VRCompositor()->WaitGetPoses(rawPoses, vr::k_unMaxTrackedDeviceCount, NULL, 0);
-            }
-
-            ID3D11Texture2D* texture;
-            HRESULT hr = pInstance->GetBuffer(0, IID_PPV_ARGS(&texture));
-            if (SUCCEEDED(hr))
-            {
-                vr::Texture_t eye = { (void*)texture, vr::TextureType_DirectX, vr::ColorSpace_Gamma };
-
-                vr::VRTextureBounds_t bounds;
                 bounds.uMin = 0.0f;
+                bounds.uMax = 0.9f;
+                bounds.vMin = 0.0f;
+                bounds.vMax = 1.0f;
+                vr::VRCompositor()->Submit(vr::Eye_Left, &eye, &bounds);
+            }
+            else {
+                bounds.uMin = 0.1f;
                 bounds.uMax = 1.0f;
                 bounds.vMin = 0.0f;
                 bounds.vMax = 1.0f;
-
-
-                if (lefteye) {
-                    vr::VRCompositor()->Submit(vr::Eye_Left, &eye);
-                }
-                else {
-                    vr::VRCompositor()->Submit(vr::Eye_Right, &eye);
-
-                }
-
-                lefteye = !lefteye;
-
-                texture->Release();
+                vr::VRCompositor()->Submit(vr::Eye_Right, &eye, &bounds);
 
             }
 
+            lefteye = !lefteye;
+
+            texture->Release();
+
         }
+
     }
     else {
         std::cout << "VR not ready yet." << std::endl;
@@ -317,15 +314,11 @@ HRESULT PresentHook(IDXGISwapChain* pInstance, UINT SyncInterval, UINT Flags)
 __int64 __fastcall CameraHook(CameraObject* a1, CameraObject* a2)
 {
     if (a2 == g_RenderView) {
-
-        // Update
         a2->cameraTransform = g_Transform;
 
     }
-
     return OriginalCamera(a1, a2);
 }
-
 
 // Shutdown and eject the mod
 void Shutdown() {
@@ -390,8 +383,7 @@ static void HookRenderer() {
     GetWindowRect(hDesktop, &desktop);
     long vertical = desktop.bottom - 50;
 
-    if (hWnd != NULL) { MoveWindow(hWnd, 0, 0, vertical / 4 * 3, vertical, TRUE); }
-    //if (hWnd != NULL) { MoveWindow(hWnd, 0, 0, 1050, 1440, TRUE); }
+    if (hWnd != NULL) { MoveWindow(hWnd, 0, 0, vertical, vertical, TRUE); }
 
 }
 
@@ -420,6 +412,21 @@ DWORD __stdcall mainThread(HMODULE module)
     Log << std::endl << std::endl << "New startup at " << ctime(&my_time) << std::endl;
 
 
+    /*
+    std::cout << "Loading config..." << std::endl;
+    Log << "Loading config..." << std::endl;
+    std::string text;
+    while (getline(Config, text)) {
+        if (text == "switcheyes")
+        {
+            switcheyes = TRUE;
+        }
+            
+    }
+
+    std::cout << "Loaded config" << std::endl;
+    Log << "Loaded config" << std::endl;
+    */
     g_RenderView = GameRenderer::GetInstance()->renderView;
     if (!IsValidPtr(g_RenderView))
     {
@@ -450,8 +457,6 @@ DWORD __stdcall mainThread(HMODULE module)
 
     std::cout << "Started Succesfully" << std::endl;
     Log << "Started Succesfully" << std::endl;
-
-    //std::cout << std::to_string((DWORD64)PatternScanner::FindPattern({ "48 8B 0D [?? ?? ?? ?? 4C 8B 01 8B 50 38", PatternType::RelativePointer })) << std::endl;
 
     // Run loop until end key is pressed
     for (;;) {
