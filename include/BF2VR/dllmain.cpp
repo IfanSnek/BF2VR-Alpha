@@ -93,7 +93,16 @@ bool GetVectors(vr::ETrackedDeviceClass device, Vec3& Loc, Vec4& Rot, vr::HmdMat
 
             }
         }
+        else {
+            std::cout << "Device bad index" << std::endl;
+            Log << "Device bad index" << std::endl;
+
+        }
     }
+    std::cout << "Device never found" << std::endl;
+    Log << "Device never found" << std::endl;
+
+    return false;
 }
 
 Vec3 eulerFromQuat(Vec4 q)
@@ -250,10 +259,10 @@ void UpdateCamera(Vec3 Loc, vr::HmdMatrix34_t Rot, float yaw, float pitch) {
     }
 
     if (lefteye) {
-        out.o.x += 0.00065;
+        out.o.x += 0.0032;
     }
     else {
-        out.o.x -= 0.00065;
+        out.o.x -= 0.0032;
     }
 
     g_Transform = out;
@@ -279,18 +288,18 @@ HRESULT PresentHook(IDXGISwapChain* pInstance, UINT SyncInterval, UINT Flags)
             vr::Texture_t eye = { (void*)texture, vr::TextureType_DirectX, vr::ColorSpace_Gamma };
 
             vr::VRTextureBounds_t bounds;
+            bounds.vMin = 0.0f;
+            bounds.vMax = 1.0f;
             if (lefteye) {
                 bounds.uMin = 0.0f;
                 bounds.uMax = 0.9f;
-                bounds.vMin = 0.0f;
-                bounds.vMax = 1.0f;
+                //bounds.uMax = 1.0f;
                 vr::VRCompositor()->Submit(vr::Eye_Left, &eye, &bounds);
             }
             else {
                 bounds.uMin = 0.1f;
+                //bounds.uMin = 0.0f;
                 bounds.uMax = 1.0f;
-                bounds.vMin = 0.0f;
-                bounds.vMax = 1.0f;
                 vr::VRCompositor()->Submit(vr::Eye_Right, &eye, &bounds);
 
             }

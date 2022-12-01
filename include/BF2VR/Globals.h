@@ -8,7 +8,7 @@
 #include "../../third-party/minhook/MinHook.h"
 
 std::ofstream Log("logs.txt", std::ios_base::app);
-std::ifstream Config("Config.txt");
+//std::ifstream Config("Config.txt");
 bool switcheyes = FALSE;
 
 std::string Level = "";
