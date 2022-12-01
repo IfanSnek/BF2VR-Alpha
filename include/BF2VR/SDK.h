@@ -2,27 +2,27 @@
 #include "Globals.h"
 //#include "SigScan/SigScan.h"
 
+// Static offsets because EA abandoned the game :(
 static const DWORD64 OffsetCamera = 0x1410c7010;
 static const DWORD64 OffsetGameRenderer = 0x143ffbe10;
 static const DWORD64 OffsetGameContext = 0x143DD7948;
 static const DWORD64 OffsetSoldierWeapon = 0x1445ECF30;
 static const DWORD64 OffsetAim = 5436270096;
 
-// basic Vector3
+// All the basic types
+
 struct Vec3 {
 	float x;
 	float y;
 	float z;
 };
 
-// Vector 4
 struct Vec4 {
 	float x;
 	float y;
 	float z;
 	float w;
 
-	// we need multiplication, addition, and subtraction operators
 	Vec4 operator* (float value) {
 		return { this->x * value, this->y * value, this->z * value, this->w * value };
 	}
@@ -41,28 +41,28 @@ struct Matrix4x4 {
 	Vec4 z;
 	Vec4 o;
 };
+
+// Reversed classes, thanks to OpenGameCamera and a hack I won't link to.
+
 class CameraObject {
 public:
 	Matrix4x4 cameraTransform;
 };
-
-
 
 class GameRenderer {
 public:
 	char pad_0000[1304]; //0x0000
 	class GameRenderSettings* gameRenderSettings; //0x0510
 	char pad_0520[24]; //0x0520
-	// NOTE(cstdr1): Below is the transform for showing the camera location
 	class RenderView* renderView; //0x0538
 	char pad_0540[4872]; //0x0540
+
 	// static method to return the default instance
 	static GameRenderer* GetInstance(void) {
 		return *(GameRenderer**)OffsetGameRenderer;
 	}
 };
 
-#define _GameRenderSettings_
 class GameRenderSettings {
 public:
 	char pad_0000[40]; //0x0000
@@ -71,12 +71,13 @@ public:
 	float forceFov; //0x005C
 	char pad_0060[1000]; //0x0060
 };
+
 // RenderView structure, where we can read the camera transform
 class RenderView {
 public:
 	Matrix4x4 transform;
 };
-#define _VehicleEntityData_
+
 class VehicleEntityData
 {
 public:
@@ -107,8 +108,6 @@ public:
 
 }; //Size: 0x1058
 
-
-#define _SoldierBlueprint_
 class SoldierBlueprint
 {
 public:
@@ -138,7 +137,6 @@ public:
 	Vec4 CachedRayCast; //0x00E0
 };
 
-#define _ClientSoldierEntity_
 class ClientSoldierEntity
 {
 public:
@@ -199,7 +197,6 @@ public:
 		}
 	}
 }; //Size: 0x0148
-
 
 class ClientPlayer
 {
@@ -326,6 +323,7 @@ public:
 	}
 }; //Size: 0x0148
 
+// These are from the cheat. 
 
 class UnknownPtr2
 {

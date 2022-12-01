@@ -6,23 +6,22 @@
 #include <fstream>
 #include "Globals.h"
 #include "HookHelper.h"
-#include "Matrices.h"
+#include "Utils/Matrices.h"
 #include <time.h>
-
-#pragma warning(disable: 4703)
+#pragma warning(disable: 4703) // Make the compiler shut up about null pointers that Minhook will assign
 
 bool IsValidPtr(PVOID p) { return (p >= (PVOID)0x10000) && (p < ((PVOID)0x000F000000000000)) && p != nullptr; }
 
-// Function to start the VR Runtime.
+// Start up OpenVR with the correct settings
 bool InitVR() {
 
-    // try to connect with openvr as an background application
+    // Try to connect with openvr as an background application
     vr::EVRInitError eError = vr::VRInitError_None;
-    m_pHMD = vr::VR_Init(&eError, vr::VRApplication_Scene);
+    g_HMD = vr::VR_Init(&eError, vr::VRApplication_Scene);
 
     if (eError != vr::VRInitError_None)
     {
-        m_pHMD = NULL;
+        g_HMD = NULL;
         std::cout << "Unable to init vr runtime." << eError << std::endl;
         Log << "Unable to init vr runtime." << eError << std::endl;
         return false;
@@ -46,16 +45,16 @@ bool InitVR() {
 // Function to get the position of a vr HMD or controller
 bool GetVectors(vr::ETrackedDeviceClass device, Vec3& Loc, Vec4& Rot, vr::HmdMatrix34_t& outMatrix)
 {
-    if (!IsValidPtr(m_pHMD)) {
+    if (!IsValidPtr(g_HMD)) {
         return false;
     }
     for (vr::TrackedDeviceIndex_t unDevice = 0; unDevice < vr::k_unMaxTrackedDeviceCount; unDevice++)
     {
-        if (!m_pHMD->IsTrackedDeviceConnected(unDevice))
+        if (!g_HMD->IsTrackedDeviceConnected(unDevice))
             continue;
 
         vr::VRControllerState_t state;
-        if (m_pHMD->GetControllerState(unDevice, &state, sizeof(state)))
+        if (g_HMD->GetControllerState(unDevice, &state, sizeof(state)))
         {
             vr::TrackedDevicePose_t trackedDevicePose;
             vr::HmdMatrix34_t matrix;
@@ -63,7 +62,7 @@ bool GetVectors(vr::ETrackedDeviceClass device, Vec3& Loc, Vec4& Rot, vr::HmdMat
 
 
             if (trackedDeviceClass == device) {
-                m_pHMD->GetDeviceToAbsoluteTrackingPose(vr::TrackingUniverseStanding, 0, &trackedDevicePose, 1);
+                g_HMD->GetDeviceToAbsoluteTrackingPose(vr::TrackingUniverseStanding, 0, &trackedDevicePose, 1);
 
 
                 matrix = trackedDevicePose.mDeviceToAbsoluteTracking;
@@ -105,6 +104,7 @@ bool GetVectors(vr::ETrackedDeviceClass device, Vec3& Loc, Vec4& Rot, vr::HmdMat
     return false;
 }
 
+// Converts quats to euler for the Aiming function
 Vec3 eulerFromQuat(Vec4 q)
 {
     #define PI 3.14159265358979323846
@@ -134,33 +134,49 @@ Vec3 eulerFromQuat(Vec4 q)
     return v;
 }
 
-// Function to set the view of the game camera
+// Original and hooked camera functions
 typedef __int64(*__fastcall tupdateCamera2)(class CameraObject*, class CameraObject*);
 tupdateCamera2 OriginalCamera = nullptr;
-void UpdateCamera(Vec3 Loc, vr::HmdMatrix34_t Rot, float yaw, float pitch) {
+__int64 __fastcall CameraHook(CameraObject* a1, CameraObject* a2)
+{
+    if (a2 == g_RenderView) {
+        a2->cameraTransform = g_Transform;
+
+    }
+    return OriginalCamera(a1, a2);
+}
+
+// Function to set the view of the game camera
+void UpdateCamera(Vec3 location, vr::HmdMatrix34_t matrix, float yaw, float pitch) {
 
     GameRenderer* pGameRenderer = GameRenderer::GetInstance();
     if (!IsValidPtr(pGameRenderer))
     {
         return;
     }
+    GameRenderSettings* pSettings = pGameRenderer->gameRenderSettings;
+    if (!IsValidPtr(pSettings))
+    {
+        return;
+    }
+    pSettings->forceFov = g_FOV;
 
-    auto r = Rot.m;
+    auto RotationMatrix = matrix.m;
 
-    Matrix4 matrix;
+    Matrix4 specialOpsMatrix;
     Matrix4 hmd_rot;
     Matrix4x4 m = g_Origin;
 
     // Matrix for the HMD rotation
     hmd_rot.set(
-        r[0][0], r[0][1], r[0][2], 0,
-        r[1][0], r[1][1], r[1][2], 0,
-        r[2][0], r[2][1], r[2][2], 0,
+        RotationMatrix[0][0], RotationMatrix[0][1], RotationMatrix[0][2], 0,
+        RotationMatrix[1][0], RotationMatrix[1][1], RotationMatrix[1][2], 0,
+        RotationMatrix[2][0], RotationMatrix[2][1], RotationMatrix[2][2], 0,
         0, 0, 0, 1
     );
 
     // Matrix for the origin
-    matrix.set(
+    specialOpsMatrix.set(
         m.x.x, m.x.y, m.x.z, m.x.w,
         m.y.x, m.y.y, m.y.z, m.y.w,
         m.z.x, m.z.y, m.z.z, m.z.w,
@@ -168,22 +184,22 @@ void UpdateCamera(Vec3 Loc, vr::HmdMatrix34_t Rot, float yaw, float pitch) {
     );
 
     hmd_rot.invert();
-    matrix = matrix * hmd_rot;
-
+    specialOpsMatrix = specialOpsMatrix * hmd_rot;
 
     // Convert back to Matrix4x4
     Matrix4x4 out;
-    out.x.x = matrix[0]; out.x.y = matrix[1]; out.x.z = matrix[2]; out.x.w = matrix[3];
-    out.y.x = matrix[4]; out.y.y = matrix[5]; out.y.z = matrix[6]; out.y.w = matrix[7];
-    out.z.x = matrix[8]; out.z.y = matrix[9]; out.z.z = matrix[10]; out.z.w = matrix[11];
-    out.o.x = matrix[12]; out.o.y = matrix[13]; out.o.z = matrix[14]; out.o.w = matrix[15];
+    out.x.x = specialOpsMatrix[0]; out.x.y = specialOpsMatrix[1]; out.x.z = specialOpsMatrix[2]; out.x.w = specialOpsMatrix[3];
+    out.y.x = specialOpsMatrix[4]; out.y.y = specialOpsMatrix[5]; out.y.z = specialOpsMatrix[6]; out.y.w = specialOpsMatrix[7];
+    out.z.x = specialOpsMatrix[8]; out.z.y = specialOpsMatrix[9]; out.z.z = specialOpsMatrix[10]; out.z.w = specialOpsMatrix[11];
+    out.o.x = specialOpsMatrix[12]; out.o.y = specialOpsMatrix[13]; out.o.z = specialOpsMatrix[14]; out.o.w = specialOpsMatrix[15];
 
     // Set location from HMD
-    out.o.x = -Loc.x;
-    out.o.y = Loc.y;
-    out.o.z = -Loc.z;
+    out.o.x = -location.x;
+    out.o.y = location.y;
+    out.o.z = -location.z;
     out.o.w = 1;
 
+    // Get some game members, validating pointers along the way
     GameContext* CurrentContext = GameContext::GetInstance();
     if (!IsValidPtr(CurrentContext)) {
         return;
@@ -197,45 +213,47 @@ void UpdateCamera(Vec3 Loc, vr::HmdMatrix34_t Rot, float yaw, float pitch) {
     }
     std::string levelname = CurrentLevel->LevelName;
 
-    if (levelname != Level)
+    if (levelname != g_Level)
     {
+        // Check for when the level name changes
         std::cout << "Switched to " << levelname << std::endl;
         Log << "Switched to " << levelname << std::endl;
-        Level = levelname;
+        g_Level = levelname;
     }
 
     if (levelname == "Levels/FrontEnd/FrontEnd")
     {
-        // Calibrate Values
+        // TODO: Calibrate Values (soldier is not available)
     }
     else
     {
-        PlayerManager* PM = CurrentContext->GetPlayerManager();
-        if (!IsValidPtr(PM)) {
+        // Get more members, again, checking along the way
+        PlayerManager* playerManager = CurrentContext->GetPlayerManager();
+        if (!IsValidPtr(playerManager)) {
             return;
         }
 
-        ClientPlayer* CLP = PM->GetLocalPlayer();
-        if (!IsValidPtr(CLP)) {
+        ClientPlayer* player = playerManager->GetLocalPlayer();
+        if (!IsValidPtr(player)) {
             return;
         }
 
-        ClientSoldierEntity* Soldier = CLP->GetClientSoldier();
-        if (!IsValidPtr(Soldier)) {
+        ClientSoldierEntity* soldier = player->GetClientSoldier();
+        if (!IsValidPtr(soldier)) {
             return;
         }
 
-        ClientSoldierPrediction* Prediction = Soldier->clientSoldierPrediction;
-        if (!IsValidPtr(Prediction)) {
+        ClientSoldierPrediction* prediction = soldier->clientSoldierPrediction;
+        if (!IsValidPtr(prediction)) {
             return;
         }
 
-        Vec3 playerPos = Prediction->Location;
-        float offset = Soldier->HeightOffset;
+        Vec3 playerPosition = prediction->Location;
+        float heightOffset = soldier->HeightOffset;
 
-        out.o.x += playerPos.x;
-        out.o.y += playerPos.y - offset + 2;
-        out.o.z += playerPos.z;
+        out.o.x += playerPosition.x;
+        out.o.y += playerPosition.y - heightOffset + g_VRHeight;
+        out.o.z += playerPosition.z;
 
 
         LocalAimer* aimer = LocalAimer::Instance();
@@ -254,17 +272,26 @@ void UpdateCamera(Vec3 Loc, vr::HmdMatrix34_t Rot, float yaw, float pitch) {
         {
             return;
         }
-        p2->pitch = pitch;
-        p2->yaw = yaw;
+
+        // Set the gun's aim
+        if (g_UpdateAim)
+        {
+            p2->pitch = pitch + g_AimPitchOffset;
+            p2->yaw = yaw + g_AimYawOffset;
+        }
+        g_AimPitch = pitch;
+        g_AimYaw = yaw;
     }
 
-    if (lefteye) {
-        out.o.x += 0.0032;
+    // Switch eye every other frame. Switch happens on DirectX present
+    if (g_lefteye) {
+        out.o.x += g_IPD / 2;
     }
     else {
-        out.o.x -= 0.0032;
+        out.o.x -= g_IPD / 2;
     }
 
+    // Update the transform that the CameraHook will use
     g_Transform = out;
 
 }
@@ -274,37 +301,41 @@ HRESULT (*Present)(IDXGISwapChain* pInstance, UINT SyncInterval, UINT Flags) = n
 HRESULT PresentHook(IDXGISwapChain* pInstance, UINT SyncInterval, UINT Flags)
 {
 
-    if (IsValidPtr(m_pHMD) && DXReady) {
+    if (IsValidPtr(g_HMD) && g_DXReady) {
 
-        if (lefteye) {
+        if (g_lefteye) {
+            // Wait get poses when we get back to the first eye, it is required before submitting both eyes again
             vr::TrackedDevicePose_t rawPoses[vr::k_unMaxTrackedDeviceCount];
             vr::VRCompositor()->WaitGetPoses(rawPoses, vr::k_unMaxTrackedDeviceCount, NULL, 0);
         }
 
+        // Get the color buffer from the screen
         ID3D11Texture2D* texture;
         HRESULT hr = pInstance->GetBuffer(0, IID_PPV_ARGS(&texture));
         if (SUCCEEDED(hr))
         {
-            vr::Texture_t eye = { (void*)texture, vr::TextureType_DirectX, vr::ColorSpace_Gamma };
+            // Convert the buffer to OpenVR's type
+            vr::Texture_t eye_texture = { (void*)texture, vr::TextureType_DirectX, vr::ColorSpace_Gamma };
 
+            // Bounds determine the mapping of the buffer to the VR screen. See the config.
             vr::VRTextureBounds_t bounds;
             bounds.vMin = 0.0f;
             bounds.vMax = 1.0f;
-            if (lefteye) {
-                bounds.uMin = 0.0f;
-                bounds.uMax = 0.9f;
-                //bounds.uMax = 1.0f;
-                vr::VRCompositor()->Submit(vr::Eye_Left, &eye, &bounds);
+
+            if (g_lefteye) {
+                bounds.uMin = g_leftmin;
+                bounds.uMax = g_leftmax;
+                vr::VRCompositor()->Submit(vr::Eye_Left, &eye_texture, &bounds);
             }
             else {
-                bounds.uMin = 0.1f;
-                //bounds.uMin = 0.0f;
-                bounds.uMax = 1.0f;
-                vr::VRCompositor()->Submit(vr::Eye_Right, &eye, &bounds);
+                bounds.uMin = g_rightmin;
+                bounds.uMax = g_rightmax;
+                vr::VRCompositor()->Submit(vr::Eye_Right, &eye_texture, &bounds);
 
             }
 
-            lefteye = !lefteye;
+            // Switch eyes
+            g_lefteye = !g_lefteye;
 
             texture->Release();
 
@@ -318,18 +349,7 @@ HRESULT PresentHook(IDXGISwapChain* pInstance, UINT SyncInterval, UINT Flags)
     return Present(pInstance, SyncInterval, Flags);
 }
 
-
-// Camera hooked function
-__int64 __fastcall CameraHook(CameraObject* a1, CameraObject* a2)
-{
-    if (a2 == g_RenderView) {
-        a2->cameraTransform = g_Transform;
-
-    }
-    return OriginalCamera(a1, a2);
-}
-
-// Shutdown and eject the mod
+// Shutdown and eject the mod. Currently only works before DirextX gets hooked.
 void Shutdown() {
     Log << "Removed Camera" << std::endl;
     HookHelper::DestroyHook(OffsetCamera);
@@ -337,18 +357,20 @@ void Shutdown() {
     Log << "Shutdown VR" << std::endl;
     vr::VR_Shutdown();
 
-    Log << "Removed DX" << std::endl;
-    DXReady = FALSE;
+    // TODO: LEt the mod eject DirectX nicely
+    //Log << "Removed DX" << std::endl;
+    //g_DXReady = FALSE;
 
     std::cout << "You may now close this window." << std::endl;
     Log << "End of log." << std::endl;
     FreeConsole();
-    FreeLibraryAndExitThread(hOwnModule, 0);
+    FreeLibraryAndExitThread(g_hOwnModule, 0);
 }
 
 // Hook the renderer
 static void HookRenderer() {
 
+    // Some nice little settings for our dummy device
     auto featureLevel = D3D_FEATURE_LEVEL_11_0;
 
     DXGI_SWAP_CHAIN_DESC desc = { };
@@ -368,74 +390,148 @@ static void HookRenderer() {
         Shutdown();
     }
 
+    // Finish setting up  our dummy
     desc.OutputWindow = hWnd;
     desc.Windowed = true;
-
     desc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
+    // Create the dummy
     if (FAILED(D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, 0, 0, &featureLevel, 1, D3D11_SDK_VERSION, &desc, &pSwapChain, &pDevice, nullptr, &pContext)))
     {
         std::cout << "Couldn't create DX device" << std::endl;
         Shutdown();
     }
 
+    // Get our Present pointer
     auto pTable = *reinterpret_cast<PVOID**>(pSwapChain);
-
     pPresent = pTable[8];
-    pResizeBuffers = pTable[13];
 
+    // Hook our dummy DirectX stuff into the real one
     MH_CreateHook(pPresent, PresentHook, reinterpret_cast<PVOID*>(&Present));
     MH_EnableHook(pPresent);
 
+    // Resize the window to the largest square
     RECT desktop;
     const HWND hDesktop = GetDesktopWindow();
     GetWindowRect(hDesktop, &desktop);
     long vertical = desktop.bottom - 50;
-
-    if (hWnd != NULL) { MoveWindow(hWnd, 0, 0, vertical, vertical, TRUE); }
+    if (hWnd != NULL) { MoveWindow(hWnd, 0, 0, vertical * g_RATIO, vertical, TRUE); }
 
 }
 
 // Reorient the VR
 void Reposition() {
 
+    // Turn off the camera update, getting the real player position
     HookHelper::DestroyHook(OffsetCamera);
+    // Same with the aim, but capture the current positions first.
+    float oldPitch = g_AimPitch;
+    float oldYaw = g_AimYaw;
+    g_UpdateAim = FALSE;
 
     Sleep(100);
 
+    // Capture the origins
+    g_Origin = GameRenderer::GetInstance()->renderView->transform;
+    g_AimPitchOffset = g_AimPitch - oldPitch;
+    g_AimYawOffset = g_AimYaw - oldYaw;
+
+    // Reenable the hooks
+    HookHelper::CreateHook(OffsetCamera, &CameraHook, &OriginalCamera);
+    g_UpdateAim = TRUE;
+
     std::cout << "Repositioned" << std::endl;
     Log << "Repositioned" << std::endl;
-    g_Origin = GameRenderer::GetInstance()->renderView->transform;
-    HookHelper::CreateHook(OffsetCamera, &CameraHook, &OriginalCamera);
 }
 
-// Main mod loop
+void LoadConfig() {
+    // Open config.txt and read it line by line, applying the values
+
+    std::cout << "Loading config..." << std::endl;
+    Log << "Loading config..." << std::endl;
+    std::string text;
+    std::string MultiLineProperty = "";
+
+    std::ifstream Config("config.txt");
+    while (getline(Config, text)) {
+
+        if (MultiLineProperty != "")
+        {
+            // Continue where we left off
+
+            if (MultiLineProperty == "IPDGAMEUNITS")
+            {
+                g_IPD = std::stof(text);
+            }
+            else if (MultiLineProperty == "EYERATIO")
+            {
+                g_RATIO = std::stof(text);
+            }
+            else if (MultiLineProperty == "MAPPINGLEFTMIN")
+            {
+                g_leftmin = std::stof(text);
+            }
+            else if (MultiLineProperty == "MAPPINGLEFTMAX")
+            {
+                g_leftmax = std::stof(text);
+            }
+            else if (MultiLineProperty == "MAPPINGRIGHTMIN")
+            {
+                g_rightmin = std::stof(text);
+            }
+            else if (MultiLineProperty == "MAPPINGRIGHTMAX")
+            {
+                g_rightmax = std::stof(text);
+            }
+            else if (MultiLineProperty == "VRHEIGHT")
+            {
+                g_VRHeight = std::stof(text);
+            }
+            else if (MultiLineProperty == "FOV")
+            {
+                g_FOV = std::stof(text);
+            }
+
+            std::cout << MultiLineProperty << "=" << text << std::endl;
+            MultiLineProperty = "";
+        }
+        // Boolean parameters
+        else if (FALSE)
+        {
+
+        }
+        // Value parameters
+        else
+        {
+            MultiLineProperty = text;
+        }
+    }
+    Config.close();
+
+    std::cout << "Loaded config" << std::endl;
+    Log << "Loaded config" << std::endl;
+
+    // Prevent multi-triggering
+    Sleep(100);
+}
+
+// Our mod thread
 DWORD __stdcall mainThread(HMODULE module)
 {
-    hOwnModule = module;
+    g_hOwnModule = module;
+
     // Open a console
     AllocConsole();
     freopen("CONOUT$", "w", stdout);
 
+    // Timestamp startup
     time_t my_time = time(NULL);
     Log << std::endl << std::endl << "New startup at " << ctime(&my_time) << std::endl;
 
-
-    /*
-    std::cout << "Loading config..." << std::endl;
-    Log << "Loading config..." << std::endl;
-    std::string text;
-    while (getline(Config, text)) {
-        if (text == "switcheyes")
-        {
-            switcheyes = TRUE;
-        }
-            
-    }
-
-    std::cout << "Loaded config" << std::endl;
-    Log << "Loaded config" << std::endl;
-    */
+    // Load config
+    LoadConfig();
+    
+    // Get a reference to the game's render view. This only updates the camera, and not the HUD or aim.
     g_RenderView = GameRenderer::GetInstance()->renderView;
     if (!IsValidPtr(g_RenderView))
     {
@@ -448,48 +544,62 @@ DWORD __stdcall mainThread(HMODULE module)
 
     Sleep(1000); // Wait for a few frames to render
 
+    // Before we start setting the custom view, get the original to make our custom view relative
     g_Origin = GameRenderer::GetInstance()->renderView->transform;
     std::cout << "Origin Captured" << std::endl;
     Log << "Origin Captured" << std::endl;
 
+    // Then hook the camera, now it will display the view from g_CameraPosition (which is 0)
     HookHelper::CreateHook(OffsetCamera, &CameraHook, &OriginalCamera);
     std::cout << "Game Camera Hooked" << std::endl;
     Log << "Game Camera Hooked" << std::endl;
 
+    // Initialize the OpenVR runtime
     if (!InitVR()) {
         Shutdown();
     }
 
+    // Hook the DirectX present function to get frames when they are rendered
     HookRenderer();
     std::cout << "Renderer Hooked" << std::endl;
     Log << "Renderer Hooked" << std::endl;
 
+    // All tests passed.
     std::cout << "Started Succesfully" << std::endl;
     Log << "Started Succesfully" << std::endl;
 
-    // Run loop until end key is pressed
+    // Main mod loop
     for (;;) {
 
-        Vec3 l;
-        Vec4 r;
-        vr::HmdMatrix34_t mat;
+        Vec3 hmd_location;
+        Vec4 hmd_quatrotation;
+        vr::HmdMatrix34_t hmd_transformationmatrix;
 
-        if (!GetVectors(vr::TrackedDeviceClass_HMD, l, r, mat)) {
+        if (!GetVectors(vr::TrackedDeviceClass_HMD, hmd_location, hmd_quatrotation, hmd_transformationmatrix)) {
+            // This will fail if g_HMD is null or no device is connected
             std::cout << "Camera not updated." << std::endl;
             Log << "Camera not updated" << std::endl;
             continue;
         }
-        Vec3 e = eulerFromQuat(r);
-        UpdateCamera(l, mat, -e.x, e.z);
+        Vec3 hmd_eulerrotation = eulerFromQuat(hmd_quatrotation);
+        UpdateCamera(hmd_location, hmd_transformationmatrix, -hmd_eulerrotation.x, hmd_eulerrotation.z);
 
 
         if (GetAsyncKeyState(VK_HOME)) {
             Reposition();
         }
 
-        //if (GetAsyncKeyState(VK_END)) {
-        //    Shutdown();
-        //}
+        if (GetAsyncKeyState(VK_INSERT)) {
+            LoadConfig();
+
+            // Update Window
+            RECT desktop;
+            const HWND hDesktop = GetDesktopWindow();
+            GetWindowRect(hDesktop, &desktop);
+            long vertical = desktop.bottom - 50;
+            HWND hWnd = FindWindowA("Frostbite", "STAR WARS Battlefront II");
+            if (hWnd != NULL) { MoveWindow(hWnd, 0, 0, vertical * g_RATIO, vertical, TRUE); }
+        }
 
     }
 

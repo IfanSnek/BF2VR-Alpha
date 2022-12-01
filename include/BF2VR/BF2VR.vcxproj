@@ -71,10 +71,10 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>E:\Programming\Battlefront\BF2VR\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>E:\Programming\Battlefront\BF2VR\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -127,7 +127,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>E:\Programming\Battlefront\BF2VR\lib\minhook.lib;E:\Programming\Battlefront\BF2VR\lib\openvr_api.lib;E:\Programming\Battlefront\BF2VR\lib\DirectXTex.lib;D3D11.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(ProjectDir)..\..\lib\minhook.lib;$(ProjectDir)..\..\lib\openvr_api.lib;D3D11.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -148,21 +148,21 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>E:\Programming\Battlefront\BF2VR\lib\minhook.lib;E:\Programming\Battlefront\BF2VR\lib\openvr_api.lib;E:\Programming\Battlefront\BF2VR\lib\DirectXTex.lib;D3D11.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(ProjectDir)..\..\lib\minhook.lib;$(ProjectDir)..\..\lib\openvr_api.lib;D3D11.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp" />
-    <ClCompile Include="Matrices.cpp" />
-    <ClCompile Include="SigScan\SigScan.cpp" />
+    <ClCompile Include="Utils\Matrices.cpp" />
+    <ClCompile Include="Utils\SigScan\SigScan.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SDK.h" />
     <ClInclude Include="Globals.h" />
-    <ClInclude Include="Matrices.h" />
     <ClInclude Include="HookHelper.h" />
-    <ClInclude Include="SigScan\SigScan.h" />
-    <ClInclude Include="Vectors.h" />
+    <ClInclude Include="Utils\Matrices.h" />
+    <ClInclude Include="Utils\SigScan\SigScan.h" />
+    <ClInclude Include="Utils\Vectors.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
