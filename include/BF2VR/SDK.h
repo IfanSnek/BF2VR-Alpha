@@ -1,6 +1,7 @@
 #pragma once
-#include "Globals.h"
-//#include "SigScan/SigScan.h"
+#include <windows.h>
+#include <stdint.h>
+#include "Matrices.h"
 
 // Static offsets because EA abandoned the game :(
 static const DWORD64 OffsetCamera = 0x1410c7010;

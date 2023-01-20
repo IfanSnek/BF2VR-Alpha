@@ -122,12 +122,13 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>$(ProjectDir)..\..\lib\minhook.lib;$(ProjectDir)..\..\lib\openvr_api.lib;D3D11.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(ProjectDir)..\..\lib\minhook.lib;$(ProjectDir)..\..\lib\openxr_loader.lib;D3D11.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -141,6 +142,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -148,21 +150,49 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>$(ProjectDir)..\..\lib\minhook.lib;$(ProjectDir)..\..\lib\openvr_api.lib;D3D11.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(ProjectDir)..\..\lib\minhook.lib;$(ProjectDir)..\..\lib\openxr_loader.lib;D3D11.lib;dxguid.lib;D3DCompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="DirectXService.cpp" />
     <ClCompile Include="dllmain.cpp" />
-    <ClCompile Include="Utils\Matrices.cpp" />
-    <ClCompile Include="Utils\SigScan\SigScan.cpp" />
+    <ClCompile Include="GameService.cpp" />
+    <ClCompile Include="Matrices.cpp" />
+    <ClCompile Include="OpenXRService.cpp" />
+    <ClCompile Include="Utils.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\third-party\OpenXR\xrmath.h" />
+    <ClInclude Include="DirectXService.h" />
+    <ClInclude Include="GameService.h" />
+    <ClInclude Include="Matrices.h" />
+    <ClInclude Include="OpenXRService.h" />
+    <ClInclude Include="PixelShader.h" />
     <ClInclude Include="SDK.h" />
-    <ClInclude Include="Globals.h" />
     <ClInclude Include="HookHelper.h" />
-    <ClInclude Include="Utils\Matrices.h" />
-    <ClInclude Include="Utils\SigScan\SigScan.h" />
-    <ClInclude Include="Utils\Vectors.h" />
+    <ClInclude Include="Utils.h" />
+    <ClInclude Include="Vectors.h" />
+    <ClInclude Include="VertexShader.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="PixelShader.hlsl">
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">PS</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </DeploymentContent>
+      <VariableName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </VariableName>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">4.0</ShaderModel>
+      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">PixelShader.h</HeaderFileOutput>
+    </FxCompile>
+    <FxCompile Include="VertexShader.hlsl">
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">VS</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <VariableName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </VariableName>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">4.0</ShaderModel>
+      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">VertexShader.h</HeaderFileOutput>
+    </FxCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
