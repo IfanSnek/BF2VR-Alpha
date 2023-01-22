@@ -15,7 +15,7 @@ namespace BF2VR {
         }
 
         Origin = GameRenderer::GetInstance()->renderView->transform;
-        log("Origina captured.");
+        log("Origin captured.");
 
         return true;
     }
@@ -41,7 +41,8 @@ namespace BF2VR {
 
     __int64 GameService::UpdateDetour(CameraObject* a1, CameraObject* a2)
     {
-        if (a2 == RenderView) {
+        if (a2 == RenderView && UpdateLook) {
+            OpenXRService::UpdatePoses();
             a2->cameraTransform = Transform;
         }
         return UpdateOriginal(a1, a2);
@@ -49,7 +50,6 @@ namespace BF2VR {
 
     // Function to set the view of the game camera
     void GameService::UpdateCamera(Vec3 location, Matrix4 HmdRot, float yaw, float pitch) {
-
         GameRenderer* pGameRenderer = GameRenderer::GetInstance();
         if (!IsValidPtr(pGameRenderer))
         {
@@ -81,7 +81,6 @@ namespace BF2VR {
         out.x.x = specialOpsMatrix[0]; out.x.y = specialOpsMatrix[1]; out.x.z = specialOpsMatrix[2]; out.x.w = specialOpsMatrix[3];
         out.y.x = specialOpsMatrix[4]; out.y.y = specialOpsMatrix[5]; out.y.z = specialOpsMatrix[6]; out.y.w = specialOpsMatrix[7];
         out.z.x = specialOpsMatrix[8]; out.z.y = specialOpsMatrix[9]; out.z.z = specialOpsMatrix[10]; out.z.w = specialOpsMatrix[11];
-        out.o.x = specialOpsMatrix[12]; out.o.y = specialOpsMatrix[13]; out.o.z = specialOpsMatrix[14]; out.o.w = specialOpsMatrix[15];
 
         // Set location from HMD
         out.o.x = -location.x;
@@ -94,26 +93,28 @@ namespace BF2VR {
         if (!IsValidPtr(CurrentContext)) {
             return;
         }
+
         ClientLevel* CurrentLevel = CurrentContext->GetClientLevel();
         if (!IsValidPtr(CurrentLevel)) {
             return;
         }
-        if (!IsValidPtr(CurrentLevel->LevelName)) {
+
+        char* levelname = CurrentLevel->LevelName;
+        if (!IsValidPtr(levelname)) {
             return;
         }
-        std::string levelname = CurrentLevel->LevelName;
 
         if (levelname != Level)
         {
             // Check for when the level name changes
-            std::cout << "Switched to " << levelname << std::endl;
-            Log << "Switched to " << levelname << std::endl;
+            std::string lvl = levelname;
+            log("Switched to " + lvl);
             Level = levelname;
         }
 
-        if (levelname == "Levels/FrontEnd/FrontEnd")
+        if (strcmp(levelname, "Levels/FrontEnd/FrontEnd") == 0)
         {
-            // TODO: Calibrate Values (soldier is not available)
+            out.o.y -= 2;
         }
         else
         {
@@ -142,7 +143,7 @@ namespace BF2VR {
             float heightOffset = soldier->HeightOffset;
 
             out.o.x += playerPosition.x;
-            out.o.y += playerPosition.y - heightOffset + VRHeight;
+            out.o.y += playerPosition.y - heightOffset + 2;
             out.o.z += playerPosition.z;
 
 
@@ -173,14 +174,6 @@ namespace BF2VR {
             AimYaw = yaw;
         }
 
-        // Switch eye every other frame. Switch happens on DirectX present
-        if (OpenXRService::LeftEye) {
-            out.o.x += IPD / 2;
-        }
-        else {
-            out.o.x -= IPD / 2;
-        }
-
         // Update the transform that the CameraHook will use
         Transform = out;
 
@@ -188,13 +181,10 @@ namespace BF2VR {
 
     // Reorient the VR
     void GameService::Reposition() {
-
-        // Turn off the camera update, getting the real player position
-        UpdateLook = false;
-
-        // Same with the aim, but capture the current positions first.
         float oldPitch = AimPitch;
         float oldYaw = AimYaw;
+
+        UpdateLook = false;
         UpdateAim = false;
 
         Sleep(100);
@@ -203,6 +193,8 @@ namespace BF2VR {
         CaptureOrigin();
         AimPitchOffset = AimPitch - oldPitch;
         AimYawOffset = AimYaw - oldYaw;
+
+        Sleep(100);
 
         UpdateLook = true;
         UpdateAim = true;

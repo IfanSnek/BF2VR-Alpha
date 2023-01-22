@@ -16,11 +16,6 @@ DWORD __stdcall mainThread(HMODULE module)
     time_t my_time = time(NULL);
     Log << std::endl << std::endl << "New startup at " << ctime(&my_time) << std::endl;
 
-    LoadConfig();
-
-    MH_Initialize();
-
-
     log("Attempting to find Battlefront window ...");
     OwnWindow = FindWindowA("Frostbite", "STAR WARS Battlefront II");
     if (!OwnWindow)
@@ -33,15 +28,20 @@ DWORD __stdcall mainThread(HMODULE module)
         log("Success");
     }
 
-    // Resize the window to the largest square
+    // Eye resolution stuff
+
+    LoadConfig();
+
     RECT desktop;
-    const HWND hDesktop = GetDesktopWindow();
-    GetWindowRect(hDesktop, &desktop);
+    GetWindowRect(OwnWindow, &desktop);
+    MoveWindow(OwnWindow, 0, 0, desktop.bottom * RATIO, desktop.bottom, TRUE);
 
-    OpenXRService::EyeHeight = desktop.bottom - 50;
-    OpenXRService::EyeWidth = OpenXRService::EyeHeight * RATIO;
+    OpenXRService::EyeWidth = desktop.bottom * RATIO;
+    OpenXRService::EyeHeight = desktop.bottom;
 
-    MoveWindow(OwnWindow, 0, 0, OpenXRService::EyeWidth, OpenXRService::EyeHeight, TRUE);
+
+    MH_Initialize();
+
 
     log("Attempting to start OpenXR ...");
     if (!OpenXRService::CreateXRInstanceWithExtensions()) {
@@ -75,7 +75,7 @@ DWORD __stdcall mainThread(HMODULE module)
     log("Attempting to hook the BF2 Camera ...");
     if (!GameService::HookCamera()) {
         log("Unable to Hook the BF2 Camera.");
-        ShutdownNoHooks();
+        Shutdown();
     }
     else {
         log("Success");
@@ -88,10 +88,6 @@ DWORD __stdcall mainThread(HMODULE module)
 
         if (GetAsyncKeyState(VK_HOME)) {
             GameService::Reposition();
-        }
-
-        if (GetAsyncKeyState(VK_INSERT)) {
-            LoadConfig();
         }
 
         if (GetAsyncKeyState(VK_END)) {

@@ -18,15 +18,19 @@ namespace BF2VR
 
     // Shutdown and eject the mod. Currently only works before DirextX gets hooked.
     void Shutdown() {
+        GameService::UpdateAim = false;
+        GameService::UpdateLook = false;
+        OpenXRService::VRReady = false;
+        DirectXService::DoPresent = false;
+
+        Sleep(100); // Let a few frames render for anyncronous present
+
         log("Unhooking Camera");
         HookHelper::DestroyHook(OffsetCamera);
 
         log("Ending VR");
         OpenXRService::EndXR();
-
-        OpenXRService::VRReady = false;
-        DirectXService::DoPresent = false;
-        Sleep(100); // Let a few frames render for anyncronous present
+        Sleep(100);
 
         log("Unhooking DirectX");
         DirectXService::UnhookDirectX();
@@ -48,51 +52,33 @@ namespace BF2VR
 
     void LoadConfig() {
 
-        return;
-
         // Open config.txt and read it line by line, applying the values
+
+        std::ifstream Config("config.txt");
+
+        if (!Config)
+        {
+            log("##############################");
+            log("IMPORTANT NOTICE:");
+            log("No valid configuration has been found. The game will autoconfigure, but then you will need to restart the game. Please read the below logs:");
+            log("##############################");
+
+            Reconfig = true;;
+            return;
+        }
 
         std::string text;
         std::string MultiLineProperty = "";
 
-        std::ifstream Config("config.txt");
         while (getline(Config, text)) {
 
             if (MultiLineProperty != "")
             {
                 // Continue where we left off
 
-                if (MultiLineProperty == "IPDGAMEUNITS")
-                {
-                    IPD = std::stof(text);
-                }
-                else if (MultiLineProperty == "EYERATIO")
+                if (MultiLineProperty == "EYERATIO")
                 {
                     RATIO = std::stof(text);
-                }
-                else if (MultiLineProperty == "MAPPINGLEFTMIN")
-                {
-                    leftmin = std::stof(text);
-                }
-                else if (MultiLineProperty == "MAPPINGLEFTMAX")
-                {
-                    leftmax = std::stof(text);
-                }
-                else if (MultiLineProperty == "MAPPINGRIGHTMIN")
-                {
-                    rightmin = std::stof(text);
-                }
-                else if (MultiLineProperty == "MAPPINGRIGHTMAX")
-                {
-                    rightmax = std::stof(text);
-                }
-                else if (MultiLineProperty == "VRHEIGHT")
-                {
-                    VRHeight = std::stof(text);
-                }
-                else if (MultiLineProperty == "FOV")
-                {
-                    FOV = std::stof(text);
                 }
 
                 //std::cout << MultiLineProperty << "=" << text << std::endl;
@@ -115,6 +101,14 @@ namespace BF2VR
 
         // Prevent multi-triggering
         Sleep(100);
+    }
+
+    void SaveConfig() {
+
+        static std::ofstream Config("config.txt", std::ios_base::app);
+
+        Config << "EYERATIO" << std::endl;
+        Config << std::to_string(RATIO) << std::endl;
     }
 
     // Converts quats to euler for the Aiming function

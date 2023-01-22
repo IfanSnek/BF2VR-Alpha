@@ -22,18 +22,15 @@ namespace BF2VR {
 
 	void LoadConfig();
 
+	void SaveConfig();
+
 	Vec3 EulerFromQuat(Vec4 q);
 
 	// Config settings
 
-	inline float IPD = 0.0064f;
-	inline float RATIO = 0.95416f;
-	inline float leftmin = -0.1f;
-	inline float leftmax = 1.0f;
-	inline float rightmin = 0.1f;
-	inline float rightmax = 1.1f;
-	inline float VRHeight = 2.0f;
-	inline float FOV = 91.0f;
+	inline float RATIO = 1;
+	inline float FOV = 90.0f;
+	inline bool Reconfig = false;
 
-	const inline double pi = 3.14159265358979323846;
+	const inline float pi = 3.14159265358979323846;
 }

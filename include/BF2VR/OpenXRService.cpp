@@ -42,10 +42,7 @@ namespace BF2VR {
             }
         }
 
-        if (std::find(enabledExtensions.begin(), enabledExtensions.end(), XR_KHR_D3D11_ENABLE_EXTENSION_NAME) != enabledExtensions.end()) {
-            log("Loaded DirextX Extention.");
-        }
-        else {
+        if (std::find(enabledExtensions.begin(), enabledExtensions.end(), XR_KHR_D3D11_ENABLE_EXTENSION_NAME) == enabledExtensions.end())  {
             log("the active OpenXR runtime does not support D3D11");
             return false;
         }
@@ -118,7 +115,7 @@ namespace BF2VR {
 
         XrReferenceSpaceCreateInfo spaceInfo = { XR_TYPE_REFERENCE_SPACE_CREATE_INFO };
         spaceInfo.poseInReferenceSpace = { { 0, 0, 0, 1 }, { 0, 0, 0 } };
-        spaceInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL;
+        spaceInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_STAGE;
         xr = xrCreateReferenceSpace(xrSession, &spaceInfo, &xrAppSpace);
         if (xr != XR_SUCCESS) {
             log("Could not create OpenXR reference space");
@@ -169,7 +166,6 @@ namespace BF2VR {
                 log("Could not enumerate OpenXR swapchain image count: " + std::to_string(xr));
                 return false;
             }
-            xrSwapchains.push_back(swapchain);
 
             std::vector<XrSwapchainImageD3D11KHR> surfaces;
             surfaces.resize(surfaceCount, { XR_TYPE_SWAPCHAIN_IMAGE_D3D11_KHR });
@@ -182,13 +178,11 @@ namespace BF2VR {
             std::vector<ID3D11RenderTargetView*> rtvs;
             for (const auto& surface : surfaces) {
 
-                D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+                D3D11_RENDER_TARGET_VIEW_DESC rtvDesc;
                 rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
                 rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-
+                rtvDesc.Texture2D.MipSlice = 0;
                 ID3D11RenderTargetView* rtv;
-                ID3D11Device* device;
-                surface.texture->GetDevice(&device);
                 HRESULT hr = DirectXService::pDevice->CreateRenderTargetView(surface.texture, &rtvDesc, &rtv);
                 if (hr != S_OK) {
                     log("Failed to create an RTV for OpenXR");
@@ -196,7 +190,7 @@ namespace BF2VR {
                 }
                 rtvs.push_back(rtv);
             }
-
+            xrSwapchains.push_back(swapchain);
             xrRTVs.insert(std::pair(i, rtvs));
         }
 
@@ -208,8 +202,6 @@ namespace BF2VR {
             log("Could not begin XR xrSession.");
             return false;
         }
-
-        log("All VR startup steps succeded.");
 
         VRReady = true;
         return true;
@@ -235,7 +227,7 @@ namespace BF2VR {
         XrViewState viewState = { XR_TYPE_VIEW_STATE };
         XrViewLocateInfo locateInfo = { XR_TYPE_VIEW_LOCATE_INFO };
         locateInfo.viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
-        locateInfo.displayTime = xrFrameState.predictedDisplayTime;
+        locateInfo.displayTime = xrFrameState.predictedDisplayTime + 2 * xrFrameState.predictedDisplayPeriod;
         locateInfo.space = xrAppSpace;
         xr = xrLocateViews(xrSession, &locateInfo, &viewState, xrViewCount, &xrProjectionViewCount, xrViews.data());
         if (xr != XR_SUCCESS) {
@@ -249,19 +241,20 @@ namespace BF2VR {
     }
 
     bool OpenXRService::SubmitFrame(ID3D11Texture2D* texture) {
-        int currentEye = !LeftEye;
+        int currentEye = !LeftEye; // If the eye is left, Lefteye = 1, but the arrays have the left eye at position 1, index 0.
 
         xrProjectionViews.at(currentEye) = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
         xrProjectionViews.at(currentEye).pose = xrViews.at(currentEye).pose;
         xrProjectionViews.at(currentEye).fov = xrViews.at(currentEye).fov;
         xrProjectionViews.at(currentEye).subImage.swapchain = xrSwapchains.at(currentEye);
-        xrProjectionViews.at(currentEye).subImage.imageRect.offset = { 0, 0 };
+        xrProjectionViews.at(currentEye).subImage.imageRect.offset = {0, 0};
         xrProjectionViews.at(currentEye).subImage.imageRect.extent = {
             static_cast<int32_t>(EyeWidth),
             static_cast<int32_t>(EyeHeight)
         };
 
-        // Wait for the frame to be ready
+
+        // Wait for the frame to be ready to render to
         uint32_t imageId;
         XrSwapchainImageAcquireInfo acquireInfo = { XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO };
         XrResult xr = xrAcquireSwapchainImage(xrSwapchains.at(currentEye), &acquireInfo, &imageId);
@@ -297,14 +290,26 @@ namespace BF2VR {
 
         int CurrentEye = !LeftEye;
 
+        if (Reconfig) {
+            RATIO = (xrViews.at(CurrentEye).fov.angleRight - xrViews.at(CurrentEye).fov.angleLeft) / (xrViews.at(CurrentEye).fov.angleUp - xrViews.at(CurrentEye).fov.angleDown);
+            log("The screen aspect ratio of an HMD eye is " + std::to_string(RATIO));
+            SaveConfig();
+            log("Saved the new config! You may restart the game now.");
+            log("You can try unloading the mod by pressing the END key on your keyboard. This will sometimes crash the game but you might as well try if restarting anyway.");
+            Reconfig = false;
+        }
+
         const auto [q1, q2, q3, q0] = xrViews.at(CurrentEye).pose.orientation;
         const auto [lx, ly, lz] = xrViews.at(CurrentEye).pose.position;
+        FOV = (xrViews.at(CurrentEye).fov.angleUp - xrViews.at(CurrentEye).fov.angleDown) * 57.2958 * RATIO;
 
         Vec3 HMDPosition;
 
-        HMDPosition.x = lx;
-        HMDPosition.y = ly;
-        HMDPosition.z = lz;
+        float scale = 1.1f;
+
+        HMDPosition.x = lx * scale;
+        HMDPosition.y = ly * scale;
+        HMDPosition.z = lz * scale;
 
         Matrix4 HMDPose;
 

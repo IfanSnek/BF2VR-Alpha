@@ -11,7 +11,7 @@ namespace BF2VR {
 		static inline Matrix4x4 Origin;
 		static inline void* RenderView = NULL;
 		static inline Vec4 CameraPosition = { 0, 0, 0, 0 };
-		static inline std::string Level = "";
+		static inline char* Level = nullptr;
 
 		static inline bool UpdateAim = true;
 		static inline bool UpdateLook = true;

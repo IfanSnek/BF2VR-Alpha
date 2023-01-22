@@ -23,9 +23,12 @@ namespace BF2VR {
                 pDevice = device;
                 pContext = context;
 
+                log("Attempting to finalize OpenXR session ...");
                 if (!OpenXRService::BeginXRSession(pDevice)) {
                     log("Unable to begin session");
                     Shutdown();
+                } else {
+                    log("Success");
                 }
             }
 
@@ -46,9 +49,7 @@ namespace BF2VR {
                 HRESULT hr = pInstance->GetBuffer(0, IID_PPV_ARGS(&CurrentFrame));
                 if (SUCCEEDED(hr))
                 {
-                    if (OpenXRService::SubmitFrame(CurrentFrame)) {
-                        //log("Rendered");
-                    }
+                    OpenXRService::SubmitFrame(CurrentFrame);
                 }
 
                 if (!OpenXRService::LeftEye) {
@@ -59,11 +60,15 @@ namespace BF2VR {
                 // Switch eyes
                 OpenXRService::LeftEye = !OpenXRService::LeftEye;
 
-                OpenXRService::UpdatePoses();
                 
             }
         }
-        return PresentOriginal(pInstance, SyncInterval, Flags);
+        if (OpenXRService::LeftEye) {
+            return PresentOriginal(pInstance, SyncInterval, Flags);
+        }
+        else {
+            return S_OK;
+        }
     }
 
     bool DirectXService::HookDirectX(HWND window) {
