@@ -16,7 +16,8 @@ namespace BF2VR {
 		static inline ID3D11Texture2D* CurrentFrame;
 
 		static inline bool shadersCreated = false;
-		static inline ID3D11VertexShader* VertexShader = nullptr;
+		static inline ID3D11VertexShader* VertexShaderRight = nullptr;
+		static inline ID3D11VertexShader* VertexShaderLeft = nullptr;
 		static inline ID3D11PixelShader* PixelShader = nullptr;
 		static inline bool srvCreated = false;
 		static inline ID3D11ShaderResourceView* srv = nullptr;
@@ -33,5 +34,9 @@ namespace BF2VR {
 		static Present PresentDetour;
 		static inline Present* PresentTarget = nullptr;
 		static inline Present* PresentOriginal = nullptr;
+
+		struct EyeBuffer {
+			bool leftEye;
+		};
 	};
 }

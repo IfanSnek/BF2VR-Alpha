@@ -115,7 +115,7 @@ namespace BF2VR {
 
         XrReferenceSpaceCreateInfo spaceInfo = { XR_TYPE_REFERENCE_SPACE_CREATE_INFO };
         spaceInfo.poseInReferenceSpace = { { 0, 0, 0, 1 }, { 0, 0, 0 } };
-        spaceInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_STAGE;
+        spaceInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL;
         xr = xrCreateReferenceSpace(xrSession, &spaceInfo, &xrAppSpace);
         if (xr != XR_SUCCESS) {
             log("Could not create OpenXR reference space");
@@ -203,7 +203,114 @@ namespace BF2VR {
             return false;
         }
 
+        // Configure actions
+        PrepareActions();
+
         VRReady = true;
+        return true;
+    }
+
+    bool OpenXRService::PrepareActions() {
+
+        log("Preparing VR Actions ...");
+
+        // Create main action set
+
+        XrActionSetCreateInfo actionSetInfo = { XR_TYPE_ACTION_SET_CREATE_INFO };
+        actionSetInfo.priority = 0;
+        strcpy(actionSetInfo.actionSetName, "mainactions");
+        strcpy(actionSetInfo.localizedActionSetName, "Main Actions");
+
+        XrResult xr = xrCreateActionSet(xrInstance, &actionSetInfo, &actionSet);
+        if (xr != XR_SUCCESS) {
+            log("Action set not created, motion controlls will not work.");
+            return false;
+        }
+
+        // Add hand actions
+
+        xrStringToPath(xrInstance, "/user/hand/left", &handPaths[0]);
+        xrStringToPath(xrInstance, "/user/hand/right", &handPaths[1]);
+
+        // Hands pose action
+
+        XrActionCreateInfo actionInfo = { XR_TYPE_ACTION_CREATE_INFO };
+        actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
+        actionInfo.countSubactionPaths = 2;
+        actionInfo.subactionPaths = handPaths.data();
+        strcpy(actionInfo.actionName, "handpose");
+        strcpy(actionInfo.localizedActionName, "Hand Pose");
+        xr = xrCreateAction(actionSet, &actionInfo, &poseAction);
+        if (xr != XR_SUCCESS) {
+            log("Failed to create pose action, motion controlls will not work.");
+            return false;
+        }
+
+        // Suggest interaction profile
+
+        XrPath grip_pose_path[2];
+        xrStringToPath(xrInstance, "/user/hand/left/input/grip/pose", &grip_pose_path[0]);
+        xrStringToPath(xrInstance, "/user/hand/right/input/grip/pose", &grip_pose_path[1]);
+
+
+        XrPath interaction_profile_path;
+        xr = xrStringToPath(xrInstance, "/interaction_profiles/khr/simple_controller", &interaction_profile_path);
+        if (xr != XR_SUCCESS) {
+            log("Failed to get interaction profile, motion controlls will not work.");
+            return false;
+        }
+
+        const XrActionSuggestedBinding bindings[] = {
+            {.action = poseAction, .binding = grip_pose_path[0]},
+            {.action = poseAction, .binding = grip_pose_path[1]},
+        };
+
+        const XrInteractionProfileSuggestedBinding suggested_bindings = {
+            .type = XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING,
+            .interactionProfile = interaction_profile_path,
+            .countSuggestedBindings = sizeof(bindings) / sizeof(bindings[0]),
+            .suggestedBindings = bindings };
+
+        xrSuggestInteractionProfileBindings(xrInstance, &suggested_bindings);
+        if (xr != XR_SUCCESS) {
+            log("Failed to suggest bindings, motion controlls will not work.");
+            return false;
+        }
+
+        // Hand pose spaces
+
+        XrActionSpaceCreateInfo action_space_info = { XR_TYPE_ACTION_SPACE_CREATE_INFO };
+        action_space_info.action = poseAction;
+        action_space_info.poseInActionSpace = { { 0, 0, 0, 1 }, { 0, 0, 0 } };
+        action_space_info.subactionPath = handPaths[0];
+
+        xr = xrCreateActionSpace(xrSession, &action_space_info, &pose_action_spaces[0]);
+        if (xr != XR_SUCCESS) {
+            log("Failed to create left hand pose space, motion controlls will not work.");
+            return false;
+        }
+
+        action_space_info.subactionPath = handPaths[1];
+
+        xr = xrCreateActionSpace(xrSession, &action_space_info, &pose_action_spaces[1]);
+        if (xr != XR_SUCCESS) {
+            log("Failed to create right hand pose space, motion controlls will not work.");
+            return false;
+        }
+
+        // Attach actions
+
+        XrSessionActionSetsAttachInfo actionset_attach_info = { XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO };
+        actionset_attach_info.countActionSets = 1;
+        actionset_attach_info.actionSets = &actionSet;
+        xr = xrAttachSessionActionSets(xrSession, &actionset_attach_info);
+        if (xr != XR_SUCCESS) {
+            log("Failed to attach action set, motion controlls will not work.");
+            return false;
+        }
+        
+        log("Success");
+
         return true;
     }
 
@@ -235,6 +342,31 @@ namespace BF2VR {
             return false;
         }
         xrProjectionViews.resize(xrProjectionViewCount);
+
+        // Get hand poses
+
+        for (int i = 0; i < 2; i++) {
+            XrActionStatePose pose_state = { XR_TYPE_ACTION_STATE_POSE };
+            XrActionStateGetInfo get_info = { XR_TYPE_ACTION_STATE_GET_INFO };
+            get_info.action = poseAction;
+            get_info.subactionPath = handPaths[i];
+            xr = xrGetActionStatePose(xrSession, &get_info, &pose_state);
+            if (xr != XR_SUCCESS) {
+                log("Failed to get pose state for a hand! " + std::to_string(xr));
+                continue;
+            }
+
+            hand_locations[i].type = XR_TYPE_SPACE_LOCATION;
+
+            xr = xrLocateSpace(pose_action_spaces[i], xrAppSpace, xrFrameState.predictedDisplayTime, &hand_locations[i]);
+            if (xr != XR_SUCCESS) {
+                log("Failed to get pose value for a hand!");
+            }
+
+            // TODO: Make this not output 0
+            //log(std::to_string(hand_locations[i].pose.position.x));
+
+        }
 
         return true;
 

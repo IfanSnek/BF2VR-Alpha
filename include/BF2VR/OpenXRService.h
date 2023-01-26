@@ -6,6 +6,7 @@
 #include <d3d11.h>
 #include <map>
 #include <vector>
+#include <array>
 
 #include "../../third-party/OpenXR/openxr.h"
 #include "../../third-party/OpenXR/openxr_platform.h"
@@ -29,6 +30,7 @@ namespace BF2VR {
 
 		static bool CreateXRInstanceWithExtensions();
 		static bool BeginXRSession(ID3D11Device* device);
+		static bool PrepareActions();
 		static bool BeginFrameAndGetVectors(Vec3& Loc, Vec4& Rot, Matrix4 outMatrix);
 		static bool SubmitFrame(ID3D11Texture2D* texture);
 		static bool UpdatePoses();
@@ -36,6 +38,7 @@ namespace BF2VR {
 		static void EndXR();
 
 	private:
+
 		// CreateXRInstanceWithExtensions
 		static inline XrEnvironmentBlendMode xrBlend = {};
 
@@ -45,6 +48,13 @@ namespace BF2VR {
 		static inline uint32_t xrViewCount = 0;
 		static inline std::vector<XrViewConfigurationView> xrConfigViews;
 		static inline std::vector<XrView> xrViews;
+
+		// PrepareActions
+		static inline std::array<XrPath, 2> handPaths;
+		static inline XrActionSet actionSet;
+		static inline XrAction poseAction;
+		static inline XrSpace pose_action_spaces[2];
+		static inline XrSpaceLocation hand_locations[2];
 
 		// BeginFrameAndGetVectors
 		static inline XrFrameState xrFrameState = {};

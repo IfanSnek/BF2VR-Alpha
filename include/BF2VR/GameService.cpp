@@ -114,7 +114,7 @@ namespace BF2VR {
 
         if (strcmp(levelname, "Levels/FrontEnd/FrontEnd") == 0)
         {
-            out.o.y -= 2;
+            out.o.y -= 3.5;
         }
         else
         {

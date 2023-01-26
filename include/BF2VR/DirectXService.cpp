@@ -1,6 +1,7 @@
 #include "DirectXService.h"
-#include "VertexShader.h"
 #include "PixelShader.h"
+#include "VSR.h"
+#include "VSL.h"
 #include "OpenXRService.h"
 #include "Utils.h"
 
@@ -135,7 +136,8 @@ namespace BF2VR {
         }
         if (shadersCreated)
         {
-            VertexShader->Release();
+            VertexShaderRight->Release();
+            VertexShaderLeft->Release();
             PixelShader->Release();
         }
         if (copy != nullptr)
@@ -169,14 +171,26 @@ namespace BF2VR {
             }
 
             hr = device->CreateVertexShader(
-                g_VS,
-                ARRAYSIZE(g_VS),
+                gVSL,
+                ARRAYSIZE(gVSL),
                 nullptr,
-                &VertexShader
+                &VertexShaderLeft
             );
 
             if (FAILED(hr)) {
-                log("Could not create vertex shader " + std::to_string(hr));
+                log("Could not create vertex shader for left eye " + std::to_string(hr));
+                return false;
+            }
+
+            hr = device->CreateVertexShader(
+                gVSR,
+                ARRAYSIZE(gVSR),
+                nullptr,
+                &VertexShaderRight
+            );
+
+            if (FAILED(hr)) {
+                log("Could not create vertex shader for right eye " + std::to_string(hr));
                 return false;
             }
 
@@ -240,7 +254,7 @@ namespace BF2VR {
         context->IASetIndexBuffer(nullptr, static_cast<DXGI_FORMAT>(0), 0);
         context->IASetInputLayout(nullptr);
         context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        context->VSSetShader(VertexShader, nullptr, 0);
+        context->VSSetShader((OpenXRService::LeftEye ? VertexShaderLeft : VertexShaderRight), nullptr, 0);
         context->PSSetShader(PixelShader, nullptr, 0);
         context->OMSetRenderTargets(1, &rtv, nullptr);
         context->PSSetShaderResources(0, 1, &srv);

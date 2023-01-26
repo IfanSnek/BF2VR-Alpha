@@ -47,9 +47,6 @@
     <ClInclude Include="PixelShader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="VertexShader.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -73,7 +70,10 @@
     <FxCompile Include="PixelShader.hlsl">
       <Filter>Resource Files</Filter>
     </FxCompile>
-    <FxCompile Include="VertexShader.hlsl">
+    <FxCompile Include="VertexShaderRight.hlsl">
+      <Filter>Resource Files</Filter>
+    </FxCompile>
+    <FxCompile Include="VertexShaderLeft.hlsl">
       <Filter>Resource Files</Filter>
     </FxCompile>
   </ItemGroup>
