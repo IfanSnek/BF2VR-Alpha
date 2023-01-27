@@ -3,12 +3,6 @@
 
 [![](https://img.shields.io/badge/Discord-Releases%20-blueviolet)](https://discord.gg/mrKYwzd3N4)
 
-**Table of Contents**
-
-[TOCM]
-
-[TOC]
-
 # About
 Battlefront II VR (BF2VR) is a project by developer, musician, and Star Wars enthusiast [Ethan Porcaro](https://ethanporcaro.com/). He has played Battlefront II for a while, and after being inspired by [praydog](https://github.com/praydog)'s upcoming Unreal Engine VR Injector, decided to see what would be possible to mod in the Frostbite Engine.
 
