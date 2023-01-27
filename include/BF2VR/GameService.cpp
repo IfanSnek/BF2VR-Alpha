@@ -65,11 +65,11 @@ namespace BF2VR {
         Matrix4 specialOpsMatrix;
         Matrix4x4 c = Origin;
 
-        // Matrix for the origin
+        // Matrix for the origin (location only)
         specialOpsMatrix.set(
-            c.x.x, c.x.y, c.x.z, c.x.w,
-            c.y.x, c.y.y, c.y.z, c.y.w,
-            c.z.x, c.z.y, c.z.z, c.z.w,
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0, 0,
             c.o.x, c.o.y, c.o.z, c.o.w
         );
 
@@ -181,13 +181,16 @@ namespace BF2VR {
 
     // Reorient the VR
     void GameService::Reposition() {
+
+        // Point the camera and solider as if the mod was off.
+
         float oldPitch = AimPitch;
         float oldYaw = AimYaw;
 
         UpdateLook = false;
         UpdateAim = false;
 
-        Sleep(100);
+        Sleep(100);  // Wait for a few frames to render
 
         // Capture the origins
         CaptureOrigin();
