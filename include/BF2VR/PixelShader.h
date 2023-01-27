@@ -36,7 +36,7 @@ ret
 // Approximately 2 instruction slots used
 #endif
 
-const BYTE g_PS[] =
+const BYTE gPS[] =
 {
      68,  88,  66,  67,  52, 239, 
     205,  10,   1, 155,  18,  98, 

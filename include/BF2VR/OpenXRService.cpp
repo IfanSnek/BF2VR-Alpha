@@ -218,8 +218,8 @@ namespace BF2VR {
 
         XrActionSetCreateInfo actionSetInfo = { XR_TYPE_ACTION_SET_CREATE_INFO };
         actionSetInfo.priority = 0;
-        strcpy(actionSetInfo.actionSetName, "mainactions");
-        strcpy(actionSetInfo.localizedActionSetName, "Main Actions");
+        strcpy(actionSetInfo.actionSetName, "gameplay");
+        strcpy(actionSetInfo.localizedActionSetName, "Gameplay");
 
         XrResult xr = xrCreateActionSet(xrInstance, &actionSetInfo, &actionSet);
         if (xr != XR_SUCCESS) {
@@ -227,23 +227,43 @@ namespace BF2VR {
             return false;
         }
 
-        // Add hand actions
-
-        xrStringToPath(xrInstance, "/user/hand/left", &handPaths[0]);
-        xrStringToPath(xrInstance, "/user/hand/right", &handPaths[1]);
 
         // Hands pose action
 
-        XrActionCreateInfo actionInfo = { XR_TYPE_ACTION_CREATE_INFO };
-        actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
-        actionInfo.countSubactionPaths = 2;
-        actionInfo.subactionPaths = handPaths.data();
-        strcpy(actionInfo.actionName, "handpose");
-        strcpy(actionInfo.localizedActionName, "Hand Pose");
-        xr = xrCreateAction(actionSet, &actionInfo, &poseAction);
-        if (xr != XR_SUCCESS) {
-            log("Failed to create pose action, motion controlls will not work.");
-            return false;
+        xrStringToPath(xrInstance, "/user/hand/left", &handPaths[0]);
+        xrStringToPath(xrInstance, "/user/hand/right", &handPaths[1]);
+        {
+
+            XrActionCreateInfo actionInfo = { XR_TYPE_ACTION_CREATE_INFO };
+            actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
+            actionInfo.countSubactionPaths = 2;
+            actionInfo.subactionPaths = handPaths.data();
+            strcpy(actionInfo.actionName, "handpose");
+            strcpy(actionInfo.localizedActionName, "Hand Pose");
+            xr = xrCreateAction(actionSet, &actionInfo, &poseAction);
+            if (xr != XR_SUCCESS) {
+                log("Failed to create pose action, motion controlls will not work.");
+                return false;
+            }
+        }
+
+        // Hand click action
+
+        xrStringToPath(xrInstance, "/user/hand/left/input/trigger/value", &triggerPaths[0]);
+        xrStringToPath(xrInstance, "/user/hand/right/input/trigger/value", &triggerPaths[1]);
+        {
+
+            XrActionCreateInfo actionInfo = { XR_TYPE_ACTION_CREATE_INFO };
+            actionInfo.actionType = XR_ACTION_TYPE_FLOAT_INPUT;
+            actionInfo.countSubactionPaths = 2;
+            actionInfo.subactionPaths = handPaths.data();
+            strcpy(actionInfo.actionName, "firefloat");
+            strcpy(actionInfo.localizedActionName, "Fire Gun");
+            xr = xrCreateAction(actionSet, &actionInfo, &triggerAction);
+            if (xr != XR_SUCCESS) {
+                log("Failed to create pose action for trigger, motion controlls will not work " + std::to_string(xr));
+                return false;
+            }
         }
 
         // Suggest interaction profile
@@ -254,47 +274,35 @@ namespace BF2VR {
 
 
         XrPath interaction_profile_path;
-        xr = xrStringToPath(xrInstance, "/interaction_profiles/khr/simple_controller", &interaction_profile_path);
+        xr = xrStringToPath(xrInstance, "/interaction_profiles/oculus/touch_controller", &interaction_profile_path);
         if (xr != XR_SUCCESS) {
             log("Failed to get interaction profile, motion controlls will not work.");
             return false;
         }
 
-        const XrActionSuggestedBinding bindings[] = {
-            {.action = poseAction, .binding = grip_pose_path[0]},
-            {.action = poseAction, .binding = grip_pose_path[1]},
-        };
+        std::vector<XrActionSuggestedBinding> bindings;
+        XrActionSuggestedBinding binding;
+        binding.action = poseAction;
+        binding.binding = grip_pose_path[0];
+        bindings.push_back(binding);
+        binding.action = poseAction;
+        binding.binding = grip_pose_path[1];
+        bindings.push_back(binding);
+        binding.action = triggerAction;
+        binding.binding = triggerPaths[0];
+        bindings.push_back(binding);
+        binding.action = triggerAction;
+        binding.binding = triggerPaths[1];
+        bindings.push_back(binding);
 
-        const XrInteractionProfileSuggestedBinding suggested_bindings = {
-            .type = XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING,
-            .interactionProfile = interaction_profile_path,
-            .countSuggestedBindings = sizeof(bindings) / sizeof(bindings[0]),
-            .suggestedBindings = bindings };
+        XrInteractionProfileSuggestedBinding suggested_bindings = { XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
+        suggested_bindings.interactionProfile = interaction_profile_path;
+        suggested_bindings.countSuggestedBindings = 4;
+        suggested_bindings.suggestedBindings = bindings.data();
 
         xrSuggestInteractionProfileBindings(xrInstance, &suggested_bindings);
         if (xr != XR_SUCCESS) {
             log("Failed to suggest bindings, motion controlls will not work.");
-            return false;
-        }
-
-        // Hand pose spaces
-
-        XrActionSpaceCreateInfo action_space_info = { XR_TYPE_ACTION_SPACE_CREATE_INFO };
-        action_space_info.action = poseAction;
-        action_space_info.poseInActionSpace = { { 0, 0, 0, 1 }, { 0, 0, 0 } };
-        action_space_info.subactionPath = handPaths[0];
-
-        xr = xrCreateActionSpace(xrSession, &action_space_info, &pose_action_spaces[0]);
-        if (xr != XR_SUCCESS) {
-            log("Failed to create left hand pose space, motion controlls will not work.");
-            return false;
-        }
-
-        action_space_info.subactionPath = handPaths[1];
-
-        xr = xrCreateActionSpace(xrSession, &action_space_info, &pose_action_spaces[1]);
-        if (xr != XR_SUCCESS) {
-            log("Failed to create right hand pose space, motion controlls will not work.");
             return false;
         }
 
@@ -308,7 +316,34 @@ namespace BF2VR {
             log("Failed to attach action set, motion controlls will not work.");
             return false;
         }
-        
+
+        // Create hand pose spaces
+        {
+            XrActionSpaceCreateInfo action_space_info = { XR_TYPE_ACTION_SPACE_CREATE_INFO };
+            action_space_info.action = poseAction;
+            action_space_info.poseInActionSpace = { { 0, 0, 0, 1 }, { 0, 0, 0 } };
+            action_space_info.subactionPath = handPaths[0];
+
+            xr = xrCreateActionSpace(xrSession, &action_space_info, &pose_action_spaces[0]);
+            if (xr != XR_SUCCESS) {
+                log("Failed to create left hand pose space, motion controlls will not work.");
+                return false;
+            }
+        }
+
+        {
+            XrActionSpaceCreateInfo action_space_info = { XR_TYPE_ACTION_SPACE_CREATE_INFO };
+            action_space_info.action = poseAction;
+            action_space_info.poseInActionSpace = { { 0, 0, 0, 1 }, { 0, 0, 0 } };
+            action_space_info.subactionPath = handPaths[1];
+
+            xr = xrCreateActionSpace(xrSession, &action_space_info, &pose_action_spaces[1]);
+            if (xr != XR_SUCCESS) {
+                log("Failed to create left hand pose space, motion controlls will not work.");
+                return false;
+            }
+        }
+
         log("Success");
 
         return true;
@@ -334,7 +369,7 @@ namespace BF2VR {
         XrViewState viewState = { XR_TYPE_VIEW_STATE };
         XrViewLocateInfo locateInfo = { XR_TYPE_VIEW_LOCATE_INFO };
         locateInfo.viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
-        locateInfo.displayTime = xrFrameState.predictedDisplayTime + 2 * xrFrameState.predictedDisplayPeriod;
+        locateInfo.displayTime = xrFrameState.predictedDisplayTime;
         locateInfo.space = xrAppSpace;
         xr = xrLocateViews(xrSession, &locateInfo, &viewState, xrViewCount, &xrProjectionViewCount, xrViews.data());
         if (xr != XR_SUCCESS) {
@@ -342,31 +377,6 @@ namespace BF2VR {
             return false;
         }
         xrProjectionViews.resize(xrProjectionViewCount);
-
-        // Get hand poses
-
-        for (int i = 0; i < 2; i++) {
-            XrActionStatePose pose_state = { XR_TYPE_ACTION_STATE_POSE };
-            XrActionStateGetInfo get_info = { XR_TYPE_ACTION_STATE_GET_INFO };
-            get_info.action = poseAction;
-            get_info.subactionPath = handPaths[i];
-            xr = xrGetActionStatePose(xrSession, &get_info, &pose_state);
-            if (xr != XR_SUCCESS) {
-                log("Failed to get pose state for a hand! " + std::to_string(xr));
-                continue;
-            }
-
-            hand_locations[i].type = XR_TYPE_SPACE_LOCATION;
-
-            xr = xrLocateSpace(pose_action_spaces[i], xrAppSpace, xrFrameState.predictedDisplayTime, &hand_locations[i]);
-            if (xr != XR_SUCCESS) {
-                log("Failed to get pose value for a hand!");
-            }
-
-            // TODO: Make this not output 0
-            //log(std::to_string(hand_locations[i].pose.position.x));
-
-        }
 
         return true;
 
@@ -418,6 +428,58 @@ namespace BF2VR {
         return true;
     }
 
+    bool OpenXRService::UpdateActions() {
+
+        // Sync actions
+
+        XrActiveActionSet active_actionsets = { actionSet, XR_NULL_PATH };
+        XrActionsSyncInfo actions_sync_info = { XR_TYPE_ACTIONS_SYNC_INFO };
+        actions_sync_info.countActiveActionSets = 1;
+        actions_sync_info.activeActionSets = &active_actionsets;
+
+        XrResult xr = xrSyncActions(xrSession, &actions_sync_info);
+        if (xr != XR_SUCCESS) {
+            log("Failed to sync actions. Skipping motion controls this frame." + std::to_string(xr));
+            return false;
+        }
+
+        // Get hand poses
+
+        for (int i = 0; i < 2; i++) {
+            {
+                XrActionStatePose pose_state = { XR_TYPE_ACTION_STATE_POSE };
+                XrActionStateGetInfo get_info = { XR_TYPE_ACTION_STATE_GET_INFO };
+                get_info.action = poseAction;
+                get_info.subactionPath = handPaths[i];
+                xr = xrGetActionStatePose(xrSession, &get_info, &pose_state);
+                if (xr != XR_SUCCESS) {
+                    log("Failed to get pose state for a hand! " + std::to_string(xr));
+                    continue;
+                }
+
+                hand_locations[i].type = XR_TYPE_SPACE_LOCATION;
+
+                xr = xrLocateSpace(pose_action_spaces[i], xrAppSpace, xrFrameState.predictedDisplayTime, &hand_locations[i]);
+                if (xr != XR_SUCCESS) {
+                    log("Failed to get pose value for a hand!");
+                }
+            }
+            {
+                // Get controller trigger states
+
+                grab_value[i].type = XR_TYPE_ACTION_STATE_FLOAT;
+
+                XrActionStateGetInfo get_info = { XR_TYPE_ACTION_STATE_GET_INFO };
+                get_info.action = triggerAction;
+                get_info.subactionPath = handPaths[i];
+                xr = xrGetActionStateFloat(xrSession, &get_info, &grab_value[i]);
+                if (xr != XR_SUCCESS) {
+                    log("Failed to get value for a trigger!");
+                }
+            }
+        }
+    }
+
     bool OpenXRService::UpdatePoses() {
 
         int CurrentEye = !LeftEye;
@@ -465,20 +527,81 @@ namespace BF2VR {
         HMDPose[14] = 0;
         HMDPose[15] = 1;
 
-        Vec4 quat;
-        quat.w = q0;
-        quat.x = q1;
-        quat.y = q2;
-        quat.z = q3;
+        const auto [hq1, hq2, hq3, hq0] = hand_locations[1].pose.orientation;
 
-        Vec3 euler = EulerFromQuat(quat);
 
-        float yaw = -euler.x;
-        float pitch = euler.z;
+        Vec4 hudQuat;
+        Vec4 aimQuat;
+        Vec4 lookQuat;
+
+        if (grab_value[0].currentState > 0.5f || grab_value[1].currentState > 0.5f)
+        {
+            // If the trigger is down, quickly point the gun at its direction
+            hudQuat.w = hq0;
+            hudQuat.x = hq1;
+            hudQuat.y = hq2;
+            hudQuat.z = hq3;
+
+            // Send a shoot event. TODO: Move this to gameservice
+
+            SetForegroundWindow(OwnWindow);
+
+            INPUT Inputs[3] = { 0 };
+
+            Inputs[0].type = INPUT_MOUSE;
+            Inputs[0].mi.dx = 10; // desired X coordinate
+            Inputs[0].mi.dy = 10; // desired Y coordinate
+            Inputs[0].mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
+
+            Inputs[1].type = INPUT_MOUSE;
+            Inputs[1].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+
+            SendInput(2, Inputs, sizeof(INPUT));
+
+        }
+        else {
+
+            INPUT Inputs[3] = { 0 };
+
+            Inputs[0].type = INPUT_MOUSE;
+            Inputs[0].mi.dx = 10; // desired X coordinate
+            Inputs[0].mi.dy = 10; // desired Y coordinate
+            Inputs[0].mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
+
+            Inputs[1].type = INPUT_MOUSE;
+            Inputs[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+
+            SendInput(2, Inputs, sizeof(INPUT));
+
+            hudQuat.w = q0;
+            hudQuat.x = q1;
+            hudQuat.y = q2;
+            hudQuat.z = q3;
+        }
+
+        lookQuat.w = q0;
+        lookQuat.x = q1;
+        lookQuat.y = q2;
+        lookQuat.z = q3;
+
+        aimQuat.w = hq0;
+        aimQuat.x = hq1;
+        aimQuat.y = hq2;
+        aimQuat.z = hq3;
+
+
+        Vec3 hudEuler = EulerFromQuat(hudQuat);
+        Vec3 aimEuler = EulerFromQuat(aimQuat);
+        Vec3 lookEuler = EulerFromQuat(lookQuat);
+
+        float yaw = -hudEuler.x;
+        float pitch = hudEuler.z;
 
         GameService::UpdateCamera(HMDPosition, HMDPose, yaw, pitch);
 
-        // TODO: Track controllers
+        float speed = 1;
+        DirectXService::crosshairX = (-aimEuler.x + lookEuler.x) * speed;
+        DirectXService::crosshairY = aimEuler.z * speed - .25f;
 
         return true;
     }

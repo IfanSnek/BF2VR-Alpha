@@ -41,7 +41,7 @@ namespace BF2VR {
 
     __int64 GameService::UpdateDetour(CameraObject* a1, CameraObject* a2)
     {
-        if (a2 == RenderView && UpdateLook) {
+        if (a2 == RenderView && UpdateLook && OpenXRService::VRReady) {
             OpenXRService::UpdatePoses();
             a2->cameraTransform = Transform;
         }
@@ -143,7 +143,7 @@ namespace BF2VR {
             float heightOffset = soldier->HeightOffset;
 
             out.o.x += playerPosition.x;
-            out.o.y += playerPosition.y - heightOffset + 2;
+            out.o.y += playerPosition.y - heightOffset + 3.5;
             out.o.z += playerPosition.z;
 
 

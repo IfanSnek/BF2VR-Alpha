@@ -33,6 +33,7 @@ namespace BF2VR {
 		static bool PrepareActions();
 		static bool BeginFrameAndGetVectors(Vec3& Loc, Vec4& Rot, Matrix4 outMatrix);
 		static bool SubmitFrame(ID3D11Texture2D* texture);
+		static bool UpdateActions();
 		static bool UpdatePoses();
 		static bool EndFrame();
 		static void EndXR();
@@ -51,10 +52,15 @@ namespace BF2VR {
 
 		// PrepareActions
 		static inline std::array<XrPath, 2> handPaths;
+		static inline std::array<XrPath, 2> triggerPaths;
 		static inline XrActionSet actionSet;
 		static inline XrAction poseAction;
+		static inline XrAction triggerAction;
 		static inline XrSpace pose_action_spaces[2];
+
+		// Action values
 		static inline XrSpaceLocation hand_locations[2];
+		static inline XrActionStateFloat grab_value[2];
 
 		// BeginFrameAndGetVectors
 		static inline XrFrameState xrFrameState = {};

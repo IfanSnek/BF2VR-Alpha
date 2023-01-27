@@ -5,6 +5,9 @@
 #include "OpenXRService.h"
 #include "Utils.h"
 
+#include <DirectXColors.h>
+#include "../../third-party/DirectXTK/SimpleMath.h"
+
 namespace BF2VR {
     class OpenXRService;
 
@@ -44,6 +47,8 @@ namespace BF2VR {
                     if (!OpenXRService::BeginFrameAndGetVectors(hmd_location, hmd_quatrotation, hmd_transformationmatrix)) {
                         log("Did not begin a frame");
                     }
+
+                    OpenXRService::UpdateActions();
                 }
 
                 // Get the color buffer from the screen
@@ -147,6 +152,60 @@ namespace BF2VR {
 
     }
 
+    void DirectXService::RenderOverlays(ID3D11Device* device, ID3D11DeviceContext* context) {
+
+
+        // This uses some parts of DirectXTK
+        // PrimitiveBatch
+
+        m_batch = std::make_unique<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>>(context);
+
+        // BasicEffect
+        m_effect.reset(new DirectX::BasicEffect(device));
+        m_effect->SetVertexColorEnabled(true);
+
+        void const* shaderByteCode;
+        size_t byteCodeLength;
+
+        m_effect->GetVertexShaderBytecode(&shaderByteCode, &byteCodeLength);
+
+        // Set InputLayout
+        device->CreateInputLayout(
+            DirectX::VertexPositionColor::InputElements,
+            DirectX::VertexPositionColor::InputElementCount,
+            shaderByteCode,
+            byteCodeLength,
+            &InputLayout);
+        
+
+        m_effect->SetView(DirectX::SimpleMath::Matrix::CreateLookAt(DirectX::SimpleMath::Vector3(0.f, 0.f, 1),
+            DirectX::SimpleMath::Vector3::Zero, DirectX::SimpleMath::Vector3::UnitY));
+
+
+        m_effect->Apply(context);
+        context->IASetInputLayout(InputLayout);
+
+        // Actually draw the line
+
+        m_batch->Begin();
+
+        float lineLength = 0.1f;
+        float shift = OpenXRService::LeftEye ? 0.2 : -0.2;
+        shift += crosshairX;
+
+        DirectX::VertexPositionColor v1(DirectX::SimpleMath::Vector3(shift -lineLength, crosshairY, 0), DirectX::Colors::White);
+        DirectX::VertexPositionColor v2(DirectX::SimpleMath::Vector3(shift + lineLength, crosshairY, 0), DirectX::Colors::White);
+
+        m_batch->DrawLine(v1, v2);
+
+        DirectX::VertexPositionColor v3(DirectX::SimpleMath::Vector3(shift, -lineLength + crosshairY, 0), DirectX::Colors::White);
+        DirectX::VertexPositionColor v4(DirectX::SimpleMath::Vector3(shift, lineLength + crosshairY, 0), DirectX::Colors::White);
+
+        m_batch->DrawLine(v3, v4);
+
+        m_batch->End();
+    }
+
     bool DirectXService::RenderXRFrame(ID3D11Texture2D* texture, ID3D11RenderTargetView* rtv)
     {
 
@@ -159,8 +218,8 @@ namespace BF2VR {
         if (!shadersCreated)
         {
             HRESULT hr = device->CreatePixelShader(
-                g_PS,
-                ARRAYSIZE(g_PS),
+                gPS,
+                ARRAYSIZE(gPS),
                 nullptr,
                 &PixelShader
             );
@@ -259,6 +318,9 @@ namespace BF2VR {
         context->OMSetRenderTargets(1, &rtv, nullptr);
         context->PSSetShaderResources(0, 1, &srv);
         context->Draw(3, 0);
+
+        RenderOverlays(device, context);
+
         context->Release();
         device->Release();
     }
