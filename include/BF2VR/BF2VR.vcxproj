@@ -157,6 +157,7 @@
     <ClCompile Include="DirectXService.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="GameService.cpp" />
+    <ClCompile Include="InputService.cpp" />
     <ClCompile Include="Matrices.cpp" />
     <ClCompile Include="OpenXRService.cpp" />
     <ClCompile Include="Utils.cpp" />
@@ -165,6 +166,7 @@
     <ClInclude Include="..\..\third-party\OpenXR\xrmath.h" />
     <ClInclude Include="DirectXService.h" />
     <ClInclude Include="GameService.h" />
+    <ClInclude Include="InputService.h" />
     <ClInclude Include="Matrices.h" />
     <ClInclude Include="OpenXRService.h" />
     <ClInclude Include="PixelShader.h" />

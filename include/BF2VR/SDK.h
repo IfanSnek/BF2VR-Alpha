@@ -8,6 +8,7 @@ static const DWORD64 OffsetCamera = 0x1410c7010;
 static const DWORD64 OffsetGameRenderer = 0x143ffbe10;
 static const DWORD64 OffsetGameContext = 0x143DD7948;
 static const DWORD64 OffsetSoldierWeapon = 0x1445ECF30;
+static const DWORD64 OffsetUISettings = 0x143aebb80;
 static const DWORD64 OffsetAim = 5436270096;
 
 // All the basic types
@@ -77,6 +78,16 @@ public:
 class RenderView {
 public:
 	Matrix4x4 transform;
+};
+
+class UISettings {
+public:
+	char pad_000[0x44];
+	bool drawEnable;
+	// static method to return the default instance, from an offset of GameTimeSettings's pointer
+	static UISettings* GetInstance(void) {
+		return *(UISettings**)OffsetUISettings;
+	}
 };
 
 class VehicleEntityData

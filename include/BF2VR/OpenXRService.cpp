@@ -1,4 +1,5 @@
 #include "OpenXRService.h"
+#include "InputService.h"
 
 #include <string>
 #include <stdint.h>
@@ -266,6 +267,38 @@ namespace BF2VR {
             }
         }
 
+        // Menu click action
+        xrStringToPath(xrInstance, "/user/hand/left/input/x/click", &menuPath);
+        {
+            XrActionCreateInfo actionInfo = { XR_TYPE_ACTION_CREATE_INFO };
+            actionInfo.actionType = XR_ACTION_TYPE_BOOLEAN_INPUT;
+            actionInfo.countSubactionPaths = 1;
+            actionInfo.subactionPaths = &handPaths[0];
+            strcpy(actionInfo.actionName, "menu");
+            strcpy(actionInfo.localizedActionName, "Toggle Menu");
+            xr = xrCreateAction(actionSet, &actionInfo, &menuAction);
+            if (xr != XR_SUCCESS) {
+                log("Failed to create pose action for menu, menu mode will not work " + std::to_string(xr));
+                return false;
+            }
+        }
+
+        // Walking (left thumbstick) atcion
+        xrStringToPath(xrInstance, "/user/hand/left/input/thumbstick", &walkPath);
+        {
+            XrActionCreateInfo actionInfo = { XR_TYPE_ACTION_CREATE_INFO };
+            actionInfo.actionType = XR_ACTION_TYPE_VECTOR2F_INPUT;
+            actionInfo.countSubactionPaths = 1;
+            actionInfo.subactionPaths = &handPaths[0];
+            strcpy(actionInfo.actionName, "walk");
+            strcpy(actionInfo.localizedActionName, "Walk");
+            xr = xrCreateAction(actionSet, &actionInfo, &walkAction);
+            if (xr != XR_SUCCESS) {
+                log("Failed to create pose action for menu, menu mode will not work " + std::to_string(xr));
+                return false;
+            }
+        }
+
         // Suggest interaction profile
 
         XrPath grip_pose_path[2];
@@ -294,10 +327,16 @@ namespace BF2VR {
         binding.action = triggerAction;
         binding.binding = triggerPaths[1];
         bindings.push_back(binding);
+        binding.action = menuAction;
+        binding.binding = menuPath;
+        bindings.push_back(binding);
+        binding.action = walkAction;
+        binding.binding = walkPath;
+        bindings.push_back(binding);
 
         XrInteractionProfileSuggestedBinding suggested_bindings = { XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
         suggested_bindings.interactionProfile = interaction_profile_path;
-        suggested_bindings.countSuggestedBindings = 4;
+        suggested_bindings.countSuggestedBindings = 6;
         suggested_bindings.suggestedBindings = bindings.data();
 
         xrSuggestInteractionProfileBindings(xrInstance, &suggested_bindings);
@@ -414,7 +453,7 @@ namespace BF2VR {
         }
 
         if (!DirectXService::RenderXRFrame(texture, xrRTVs.at(currentEye).at(imageId))) {
-            log("Failed to render a frame");
+            log("Skipped a frame");
             
         }
 
@@ -477,11 +516,55 @@ namespace BF2VR {
                     log("Failed to get value for a trigger!");
                 }
             }
+            {
+                // Get menu button state
+
+                menu_value.type = XR_TYPE_ACTION_STATE_BOOLEAN;
+
+                XrActionStateGetInfo get_info = { XR_TYPE_ACTION_STATE_GET_INFO };
+                get_info.action = menuAction;
+                get_info.subactionPath = handPaths[0];
+                xr = xrGetActionStateBoolean(xrSession, &get_info, &menu_value);
+                if (xr != XR_SUCCESS) {
+                    log("Failed to get value for menu button!");
+                }
+                if (menu_value.currentState && !pressingMenu)
+                {
+                    log("Toggled menu");
+                    pressingMenu = true;
+                    Menu = !Menu;
+                    GameService::SetMenu(Menu);
+                }
+                if (!menu_value.currentState && pressingMenu)
+                {
+                    pressingMenu = false;
+                }
+
+            }
+            {
+                // Get walking state
+
+                menu_value.type = XR_TYPE_ACTION_STATE_VECTOR2F;
+
+                XrActionStateGetInfo get_info = { XR_TYPE_ACTION_STATE_GET_INFO };
+                get_info.action = walkAction;
+                get_info.subactionPath = handPaths[0];
+                xr = xrGetActionStateVector2f(xrSession, &get_info, &walk_value);
+                if (xr != XR_SUCCESS) {
+                    log("Failed to get value for the left thumbstick!");
+                }
+
+                // Set the xinput state
+
+                InputService::lX = walk_value.currentState.x * 32767;
+                InputService::lY = walk_value.currentState.y * 32767;
+
+
+            }
         }
     }
 
     bool OpenXRService::UpdatePoses() {
-
         int CurrentEye = !LeftEye;
 
         if (Reconfig) {
@@ -527,26 +610,26 @@ namespace BF2VR {
         HMDPose[14] = 0;
         HMDPose[15] = 1;
 
-        const auto [hq1, hq2, hq3, hq0] = hand_locations[1].pose.orientation;
+        int hand = !LeftHanded;
+        const auto [hq1, hq2, hq3, hq0] = hand_locations[hand].pose.orientation;
 
 
         Vec4 hudQuat;
         Vec4 aimQuat;
         Vec4 lookQuat;
 
-        if (grab_value[0].currentState > 0.5f || grab_value[1].currentState > 0.5f)
-        {
-            // If the trigger is down, quickly point the gun at its direction
-            hudQuat.w = hq0;
-            hudQuat.x = hq1;
-            hudQuat.y = hq2;
-            hudQuat.z = hq3;
+        hudQuat.w = q0;
+        hudQuat.x = q1;
+        hudQuat.y = q2;
+        hudQuat.z = q3;
 
+        if (Firing)
+        {
             // Send a shoot event. TODO: Move this to gameservice
 
             SetForegroundWindow(OwnWindow);
 
-            INPUT Inputs[3] = { 0 };
+            INPUT Inputs[2] = { 0 };
 
             Inputs[0].type = INPUT_MOUSE;
             Inputs[0].mi.dx = 10; // desired X coordinate
@@ -557,11 +640,6 @@ namespace BF2VR {
             Inputs[1].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
 
             SendInput(2, Inputs, sizeof(INPUT));
-
-        }
-        else {
-
-            INPUT Inputs[3] = { 0 };
 
             Inputs[0].type = INPUT_MOUSE;
             Inputs[0].mi.dx = 10; // desired X coordinate
@@ -577,6 +655,28 @@ namespace BF2VR {
             hudQuat.x = q1;
             hudQuat.y = q2;
             hudQuat.z = q3;
+
+            Firing = false;
+
+        } else if (grab_value[0].currentState > 0.5f || grab_value[1].currentState > 0.5f)
+        {
+            if (grab_value[0].currentState > grab_value[1].currentState) {
+                LeftHanded = true;
+            } else if (grab_value[1].currentState > grab_value[0].currentState) {
+                LeftHanded = false;
+            }
+
+            if (!Firing)
+            {
+                // If the trigger is down, quickly point the gun at its direction
+
+                hudQuat.w = hq0;
+                hudQuat.x = hq1;
+                hudQuat.y = hq2;
+                hudQuat.z = hq3;
+
+                Firing = true;
+            }
         }
 
         lookQuat.w = q0;
@@ -599,9 +699,9 @@ namespace BF2VR {
 
         GameService::UpdateCamera(HMDPosition, HMDPose, yaw, pitch);
 
-        float speed = 1;
+        float speed = 1.25;
         DirectXService::crosshairX = (-aimEuler.x + lookEuler.x) * speed;
-        DirectXService::crosshairY = aimEuler.z * speed - .25f;
+        DirectXService::crosshairY = (aimEuler.z - lookEuler.z) * speed;
 
         return true;
     }

@@ -3,6 +3,7 @@
 #include <string>
 #include "DirectXService.h"
 #include "OpenXRService.h"
+#include "InputService.h"
 #include "HookHelper.h"
 
 namespace BF2VR
@@ -18,8 +19,6 @@ namespace BF2VR
 
     // Shutdown and eject the mod. Currently only works before DirextX gets hooked.
     void Shutdown() {
-        GameService::UpdateAim = false;
-        GameService::UpdateLook = false;
         OpenXRService::VRReady = false;
         DirectXService::DoPresent = false;
 
@@ -34,6 +33,9 @@ namespace BF2VR
 
         log("Unhooking DirectX");
         DirectXService::UnhookDirectX();
+
+        log("Unhooking XInput");
+        InputService::UnhookXInput();
 
         ShutdownNoHooks();
     }

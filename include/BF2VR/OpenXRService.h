@@ -28,6 +28,15 @@ namespace BF2VR {
 		static inline bool LeftEye = true;
 		static inline bool VRReady = false;
 
+		static inline bool Firing = false;
+		static inline bool LeftHanded = false;
+		static inline bool Menu = true;
+		static inline bool pressingMenu = false;
+		static inline bool pressingW = false;
+		static inline bool pressingA = false;
+		static inline bool pressingS = false;
+		static inline bool pressingD = false;
+
 		static bool CreateXRInstanceWithExtensions();
 		static bool BeginXRSession(ID3D11Device* device);
 		static bool PrepareActions();
@@ -51,16 +60,25 @@ namespace BF2VR {
 		static inline std::vector<XrView> xrViews;
 
 		// PrepareActions
+		static inline XrActionSet actionSet;
+
 		static inline std::array<XrPath, 2> handPaths;
 		static inline std::array<XrPath, 2> triggerPaths;
-		static inline XrActionSet actionSet;
+		static inline XrPath menuPath;
+		static inline XrPath walkPath;
+
 		static inline XrAction poseAction;
 		static inline XrAction triggerAction;
+		static inline XrAction menuAction;
+		static inline XrAction walkAction;
+
 		static inline XrSpace pose_action_spaces[2];
 
 		// Action values
 		static inline XrSpaceLocation hand_locations[2];
 		static inline XrActionStateFloat grab_value[2];
+		static inline XrActionStateBoolean menu_value;
+		static inline XrActionStateVector2f walk_value;
 
 		// BeginFrameAndGetVectors
 		static inline XrFrameState xrFrameState = {};

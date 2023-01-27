@@ -4,25 +4,15 @@
 #include "OpenXRService.h"
 
 namespace BF2VR {
-    bool GameService::CaptureOrigin() {
-
-        // Get a reference to the game's render view. This only updates the camera, and not the HUD or aim.
-        RenderView = GameRenderer::GetInstance()->renderView;
-        if (!IsValidPtr(RenderView))
-        {
-            log("Unable to capture origin, Renderview is invalid.");
-            return false;
-        }
-
-        Origin = GameRenderer::GetInstance()->renderView->transform;
-        log("Origin captured.");
-
-        return true;
-    }
     
     bool GameService::HookCamera() {
 
-        CaptureOrigin();
+        RenderView = GameRenderer::GetInstance()->renderView;
+        if (!IsValidPtr(RenderView))
+        {
+            log("Unable to hook camera, Renderview is invalid.");
+            return false;
+        }
 
         MH_STATUS mh = MH_CreateHook(reinterpret_cast<LPVOID>(OffsetCamera), reinterpret_cast<LPVOID>(&UpdateDetour), reinterpret_cast<LPVOID*>(&UpdateOriginal));
         if (mh != MH_OK) {
@@ -35,13 +25,12 @@ namespace BF2VR {
             log("Error enabling BF2 UpdateCamera hook: " + std::to_string(mh));
             return false;
         }
-
         return true;
     }
 
     __int64 GameService::UpdateDetour(CameraObject* a1, CameraObject* a2)
     {
-        if (a2 == RenderView && UpdateLook && OpenXRService::VRReady) {
+        if (a2 == RenderView && OpenXRService::VRReady) {
             OpenXRService::UpdatePoses();
             a2->cameraTransform = Transform;
         }
@@ -62,30 +51,18 @@ namespace BF2VR {
         }
         pSettings->forceFov = FOV;
 
-        Matrix4 specialOpsMatrix;
-        Matrix4x4 c = Origin;
-
-        // Matrix for the origin (location only)
-        specialOpsMatrix.set(
-            0, 0, 0, 0,
-            0, 0, 0, 0,
-            0, 0, 0, 0,
-            c.o.x, c.o.y, c.o.z, c.o.w
-        );
-
         HmdRot.invert();
-        specialOpsMatrix = specialOpsMatrix * HmdRot;
 
         // Convert back to Matrix4x4
         Matrix4x4 out;
-        out.x.x = specialOpsMatrix[0]; out.x.y = specialOpsMatrix[1]; out.x.z = specialOpsMatrix[2]; out.x.w = specialOpsMatrix[3];
-        out.y.x = specialOpsMatrix[4]; out.y.y = specialOpsMatrix[5]; out.y.z = specialOpsMatrix[6]; out.y.w = specialOpsMatrix[7];
-        out.z.x = specialOpsMatrix[8]; out.z.y = specialOpsMatrix[9]; out.z.z = specialOpsMatrix[10]; out.z.w = specialOpsMatrix[11];
+        out.x.x = HmdRot[0]; out.x.y = HmdRot[1]; out.x.z = HmdRot[2]; out.x.w = HmdRot[3];
+        out.y.x = HmdRot[4]; out.y.y = HmdRot[5]; out.y.z = HmdRot[6]; out.y.w = HmdRot[7];
+        out.z.x = HmdRot[8]; out.z.y = HmdRot[9]; out.z.z = HmdRot[10]; out.z.w = HmdRot[11];
 
         // Set location from HMD
-        out.o.x = -location.x;
+        out.o.x = location.x;
         out.o.y = location.y;
-        out.o.z = -location.z;
+        out.o.z = location.z;
         out.o.w = 1;
 
         // Get some game members, validating pointers along the way
@@ -165,13 +142,9 @@ namespace BF2VR {
             }
 
             // Set the gun's aim
-            if (UpdateAim)
-            {
-                p2->pitch = pitch + AimPitchOffset;
-                p2->yaw = yaw + AimYawOffset;
-            }
-            AimPitch = pitch;
-            AimYaw = yaw;
+
+            p2->pitch = pitch;
+            p2->yaw = yaw + 135;
         }
 
         // Update the transform that the CameraHook will use
@@ -179,29 +152,14 @@ namespace BF2VR {
 
     }
 
-    // Reorient the VR
-    void GameService::Reposition() {
 
-        // Point the camera and solider as if the mod was off.
-
-        float oldPitch = AimPitch;
-        float oldYaw = AimYaw;
-
-        UpdateLook = false;
-        UpdateAim = false;
-
-        Sleep(100);  // Wait for a few frames to render
-
-        // Capture the origins
-        CaptureOrigin();
-        AimPitchOffset = AimPitch - oldPitch;
-        AimYawOffset = AimYaw - oldYaw;
-
-        Sleep(100);
-
-        UpdateLook = true;
-        UpdateAim = true;
-
-        log("Repositioned");
+    void GameService::SetMenu(bool enabled) {
+        UISettings* pUISettings = UISettings::GetInstance();
+        if (!IsValidPtr(pUISettings))
+        {
+            log("UI pointer invalid");
+            return;
+        }
+        pUISettings->drawEnable = enabled;
     }
 }

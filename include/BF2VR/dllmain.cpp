@@ -1,6 +1,7 @@
 #include "DirectXService.h"
 #include "OpenXRService.h"
 #include "GameService.h"
+#include "InputService.h"
 #include "Utils.h"
 
 using namespace BF2VR;
@@ -42,7 +43,6 @@ DWORD __stdcall mainThread(HMODULE module)
 
     MH_Initialize();
 
-
     log("Attempting to start OpenXR ...");
     if (!OpenXRService::CreateXRInstanceWithExtensions()) {
         log("Unable to start vr");
@@ -53,19 +53,21 @@ DWORD __stdcall mainThread(HMODULE module)
         log("Success");
     }
 
-    Sleep(100); // Wait for a few frames to render
+    Sleep(100);
 
-    log("Attempting to capture the soldier's position ...");
-    if (!GameService::CaptureOrigin()) {
-        log("Unable to capture origin. The game will continue, but you may have to recenter with the HOME key yourself.");
+    log("Attempting to hook DirectX ...");
+    if (!DirectXService::HookDirectX(OwnWindow)) {
+        log("Unable to Hook DirectX.");
+        ShutdownNoHooks();
     }
     else {
         log("Success");
     }
 
-    log("Attempting to hook DirectX ...");
-    if (!DirectXService::HookDirectX(OwnWindow)) {
-        log("Unable to Hook DirectX.");
+    log("Attempting to hook XInput ...");
+    if (!InputService::HookXInput()) {
+        log("Unable to Hook XInput.");
+        DirectXService::UnhookDirectX();
         ShutdownNoHooks();
     }
     else {
@@ -85,10 +87,6 @@ DWORD __stdcall mainThread(HMODULE module)
 
 
     for (;;) {
-
-        if (GetAsyncKeyState(VK_HOME)) {
-            GameService::Reposition();
-        }
 
         if (GetAsyncKeyState(VK_END)) {
             Shutdown();
