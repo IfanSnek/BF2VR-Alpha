@@ -623,42 +623,7 @@ namespace BF2VR {
         hudQuat.y = q2;
         hudQuat.z = q3;
 
-        if (Firing)
-        {
-            // Send a shoot event. TODO: Move this to gameservice
-
-            SetForegroundWindow(OwnWindow);
-
-            INPUT Inputs[2] = { 0 };
-
-            Inputs[0].type = INPUT_MOUSE;
-            Inputs[0].mi.dx = 10; // desired X coordinate
-            Inputs[0].mi.dy = 10; // desired Y coordinate
-            Inputs[0].mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
-
-            Inputs[1].type = INPUT_MOUSE;
-            Inputs[1].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
-
-            SendInput(2, Inputs, sizeof(INPUT));
-
-            Inputs[0].type = INPUT_MOUSE;
-            Inputs[0].mi.dx = 10; // desired X coordinate
-            Inputs[0].mi.dy = 10; // desired Y coordinate
-            Inputs[0].mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
-
-            Inputs[1].type = INPUT_MOUSE;
-            Inputs[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
-
-            SendInput(2, Inputs, sizeof(INPUT));
-
-            hudQuat.w = q0;
-            hudQuat.x = q1;
-            hudQuat.y = q2;
-            hudQuat.z = q3;
-
-            Firing = false;
-
-        } else if (grab_value[0].currentState > 0.5f || grab_value[1].currentState > 0.5f)
+        if (grab_value[0].currentState > 0.5f || grab_value[1].currentState > 0.5f)
         {
             if (grab_value[0].currentState > grab_value[1].currentState) {
                 LeftHanded = true;
@@ -668,15 +633,29 @@ namespace BF2VR {
 
             if (!Firing)
             {
+                Firing = true;
+
                 // If the trigger is down, quickly point the gun at its direction
 
-                hudQuat.w = hq0;
-                hudQuat.x = hq1;
-                hudQuat.y = hq2;
-                hudQuat.z = hq3;
+                // Press the mouse down
 
-                Firing = true;
+                SetForegroundWindow(OwnWindow);
+
+                INPUT Inputs[1] = { 0 };
+
+                Inputs[0].type = INPUT_MOUSE;
+                Inputs[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+
+                SendInput(1, Inputs, sizeof(INPUT));
             }
+        }
+
+        if (Firing)
+        {
+            hudQuat.w = hq0;
+            hudQuat.x = hq1;
+            hudQuat.y = hq2;
+            hudQuat.z = hq3;
         }
 
         lookQuat.w = q0;
@@ -702,6 +681,30 @@ namespace BF2VR {
         float speed = 1.25;
         DirectXService::crosshairX = (-aimEuler.x + lookEuler.x) * speed;
         DirectXService::crosshairY = (aimEuler.z - lookEuler.z) * speed;
+
+        if (!grab_value[0].currentState > 0.5f && !grab_value[1].currentState > 0.5f && Firing)
+        {
+            // Send a shoot event. TODO: Move this to gameservice
+
+            SetForegroundWindow(OwnWindow);
+
+            INPUT Inputs[1] = { 0 };
+
+            Inputs[0].type = INPUT_MOUSE;
+            Inputs[0].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+
+            SendInput(1, Inputs, sizeof(INPUT));
+
+            // Set the hud back to the head
+
+            hudQuat.w = q0;
+            hudQuat.x = q1;
+            hudQuat.y = q2;
+            hudQuat.z = q3;
+
+            Firing = false;
+
+        }
 
         return true;
     }

@@ -1,5 +1,5 @@
 #include <Xinput.h>
-#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
+#define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <Windows.h>
 
