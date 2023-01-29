@@ -1,28 +1,26 @@
 #include <Xinput.h>
 #define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <Windows.h>
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 
-#include "../../third-party/minhook/MinHook.h"
+#include "../../third-party/ViGEm/Client.h"
 
 namespace BF2VR {
 	class InputService {
 	public:
-		static inline XINPUT_STATE* state = nullptr;
 
 		static inline int lX = 0;
 		static inline int lY = 0;
+		static inline byte bL = 0;
+		static inline byte bR = 0;
+		static inline WORD buttons = 0;
 
-		static inline unsigned int packet = 0;
-
-		static bool HookXInput();
-
-		static void UnhookXInput();
+		static bool Connect();
+		static void Update();
+		static void Disconnect();
 
 	private:
-		static DWORD detourXInputGetState(DWORD dwUserIndex, XINPUT_STATE* pState);
-
-		typedef DWORD(*XINPUTGETSTATE)(DWORD, XINPUT_STATE*);
-		static inline XINPUTGETSTATE hookedXInputGetState = nullptr;
+		static inline PVIGEM_CLIENT client;
+		static inline PVIGEM_TARGET pad;
 	};
 }

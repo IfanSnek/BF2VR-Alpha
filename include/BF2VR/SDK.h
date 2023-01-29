@@ -7,9 +7,8 @@
 static const DWORD64 OffsetCamera = 0x1410c7010;
 static const DWORD64 OffsetGameRenderer = 0x143ffbe10;
 static const DWORD64 OffsetGameContext = 0x143DD7948;
-static const DWORD64 OffsetSoldierWeapon = 0x1445ECF30;
 static const DWORD64 OffsetUISettings = 0x143aebb80;
-static const DWORD64 OffsetAim = 5436270096;
+static const DWORD64 OffsetAim = 0x14406E610;
 
 // All the basic types
 

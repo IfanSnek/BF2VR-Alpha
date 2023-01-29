@@ -32,5 +32,5 @@ namespace BF2VR {
 	inline float FOV = 90.0f;
 	inline bool Reconfig = false;
 
-	const inline float pi = 3.14159265358979323846;
+	const inline float pi = 3.14159265358979323846f;
 }

@@ -190,20 +190,20 @@ namespace BF2VR {
         m_batch->Begin();
 
         float lineLength = 0.1f;
-        float shift = OpenXRService::LeftEye ? 0.2 : -0.2;
+        float shift = (OpenXRService::LeftEye ? 0.f : -0.3f);
         shift += crosshairX;
 
-        DirectX::VertexPositionColor v1(DirectX::SimpleMath::Vector3(shift - lineLength, crosshairY + 0.01, 0), DirectX::Colors::Green);
-        DirectX::VertexPositionColor v2(DirectX::SimpleMath::Vector3(shift + lineLength, crosshairY + 0.01, 0), DirectX::Colors::Green);
-        DirectX::VertexPositionColor v3(DirectX::SimpleMath::Vector3(shift - lineLength, crosshairY - 0.01, 0), DirectX::Colors::Green);
-        DirectX::VertexPositionColor v4(DirectX::SimpleMath::Vector3(shift + lineLength, crosshairY - 0.01, 0), DirectX::Colors::Green);
+        DirectX::VertexPositionColor v1(DirectX::SimpleMath::Vector3(shift - lineLength, crosshairY + 0.003f, 0), DirectX::Colors::Green);
+        DirectX::VertexPositionColor v2(DirectX::SimpleMath::Vector3(shift + lineLength, crosshairY + 0.003f, 0), DirectX::Colors::Green);
+        DirectX::VertexPositionColor v3(DirectX::SimpleMath::Vector3(shift - lineLength, crosshairY - 0.003f, 0), DirectX::Colors::Green);
+        DirectX::VertexPositionColor v4(DirectX::SimpleMath::Vector3(shift + lineLength, crosshairY - 0.003f, 0), DirectX::Colors::Green);
 
         m_batch->DrawQuad(v1, v2, v4, v3);
 
-        DirectX::VertexPositionColor v5(DirectX::SimpleMath::Vector3(shift + 0.01, -lineLength + crosshairY, 0), DirectX::Colors::Green);
-        DirectX::VertexPositionColor v6(DirectX::SimpleMath::Vector3(shift + 0.01, lineLength + crosshairY, 0), DirectX::Colors::Green);
-        DirectX::VertexPositionColor v7(DirectX::SimpleMath::Vector3(shift - 0.01, -lineLength + crosshairY, 0), DirectX::Colors::Green);
-        DirectX::VertexPositionColor v8(DirectX::SimpleMath::Vector3(shift - 0.01, lineLength + crosshairY, 0), DirectX::Colors::Green);
+        DirectX::VertexPositionColor v5(DirectX::SimpleMath::Vector3(shift + 0.003f, -lineLength + crosshairY, 0), DirectX::Colors::Green);
+        DirectX::VertexPositionColor v6(DirectX::SimpleMath::Vector3(shift + 0.003f, lineLength + crosshairY, 0), DirectX::Colors::Green);
+        DirectX::VertexPositionColor v7(DirectX::SimpleMath::Vector3(shift - 0.003f, -lineLength + crosshairY, 0), DirectX::Colors::Green);
+        DirectX::VertexPositionColor v8(DirectX::SimpleMath::Vector3(shift - 0.003f, lineLength + crosshairY, 0), DirectX::Colors::Green);
 
         m_batch->DrawQuad(v5,v6,v8,v7);
 

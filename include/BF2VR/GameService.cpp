@@ -4,7 +4,7 @@
 #include "OpenXRService.h"
 
 namespace BF2VR {
-    
+
     bool GameService::HookCamera() {
 
         RenderView = GameRenderer::GetInstance()->renderView;
@@ -140,8 +140,6 @@ namespace BF2VR {
             {
                 return;
             }
-
-            // Set the gun's aim
 
             p2->pitch = pitch;
             p2->yaw = yaw + 135;

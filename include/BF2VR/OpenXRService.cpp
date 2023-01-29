@@ -267,6 +267,25 @@ namespace BF2VR {
             }
         }
 
+        // Hand grip
+
+        xrStringToPath(xrInstance, "/user/hand/left/input/squeeze/value", &gripPaths[0]);
+        xrStringToPath(xrInstance, "/user/hand/right/input/squeeze/value", &gripPaths[1]);
+        {
+
+            XrActionCreateInfo actionInfo = { XR_TYPE_ACTION_CREATE_INFO };
+            actionInfo.actionType = XR_ACTION_TYPE_FLOAT_INPUT;
+            actionInfo.countSubactionPaths = 2;
+            actionInfo.subactionPaths = handPaths.data();
+            strcpy(actionInfo.actionName, "grip");
+            strcpy(actionInfo.localizedActionName, "Left Right and Middle Abilities");
+            xr = xrCreateAction(actionSet, &actionInfo, &gripAction);
+            if (xr != XR_SUCCESS) {
+                log("Failed to create pose action for grip, motion controlls will not work " + std::to_string(xr));
+                return false;
+            }
+        }
+
         // Menu click action
         xrStringToPath(xrInstance, "/user/hand/left/input/x/click", &menuPath);
         {
@@ -279,6 +298,38 @@ namespace BF2VR {
             xr = xrCreateAction(actionSet, &actionInfo, &menuAction);
             if (xr != XR_SUCCESS) {
                 log("Failed to create pose action for menu, menu mode will not work " + std::to_string(xr));
+                return false;
+            }
+        }
+
+        // Battle roll action
+        xrStringToPath(xrInstance, "/user/hand/right/input/b/click", &rollPath);
+        {
+            XrActionCreateInfo actionInfo = { XR_TYPE_ACTION_CREATE_INFO };
+            actionInfo.actionType = XR_ACTION_TYPE_BOOLEAN_INPUT;
+            actionInfo.countSubactionPaths = 1;
+            actionInfo.subactionPaths = &handPaths[1];
+            strcpy(actionInfo.actionName, "roll");
+            strcpy(actionInfo.localizedActionName, "Battle Roll");
+            xr = xrCreateAction(actionSet, &actionInfo, &rollAction);
+            if (xr != XR_SUCCESS) {
+                log("Failed to create pose action for roll, battle roll will not work " + std::to_string(xr));
+                return false;
+            }
+        }
+
+        // Jump Action
+        xrStringToPath(xrInstance, "/user/hand/right/input/a/click", &jumpPath);
+        {
+            XrActionCreateInfo actionInfo = { XR_TYPE_ACTION_CREATE_INFO };
+            actionInfo.actionType = XR_ACTION_TYPE_BOOLEAN_INPUT;
+            actionInfo.countSubactionPaths = 1;
+            actionInfo.subactionPaths = &handPaths[1];
+            strcpy(actionInfo.actionName, "jump");
+            strcpy(actionInfo.localizedActionName, "Jump");
+            xr = xrCreateAction(actionSet, &actionInfo, &jumpAction);
+            if (xr != XR_SUCCESS) {
+                log("Failed to create pose action for jump, jumping will not work " + std::to_string(xr));
                 return false;
             }
         }
@@ -321,22 +372,41 @@ namespace BF2VR {
         binding.action = poseAction;
         binding.binding = grip_pose_path[1];
         bindings.push_back(binding);
+
         binding.action = triggerAction;
         binding.binding = triggerPaths[0];
         bindings.push_back(binding);
         binding.action = triggerAction;
         binding.binding = triggerPaths[1];
         bindings.push_back(binding);
+
+        binding.action = gripAction;
+        binding.binding = gripPaths[0];
+        bindings.push_back(binding);
+        binding.action = gripAction;
+        binding.binding = gripPaths[1];
+        bindings.push_back(binding);
+
         binding.action = menuAction;
         binding.binding = menuPath;
         bindings.push_back(binding);
+
         binding.action = walkAction;
         binding.binding = walkPath;
         bindings.push_back(binding);
 
+        binding.action = rollAction;
+        binding.binding = rollPath;
+        bindings.push_back(binding);
+
+        binding.action = jumpAction;
+        binding.binding = jumpPath;
+        bindings.push_back(binding);
+
+
         XrInteractionProfileSuggestedBinding suggested_bindings = { XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
         suggested_bindings.interactionProfile = interaction_profile_path;
-        suggested_bindings.countSuggestedBindings = 6;
+        suggested_bindings.countSuggestedBindings = 10;
         suggested_bindings.suggestedBindings = bindings.data();
 
         xrSuggestInteractionProfileBindings(xrInstance, &suggested_bindings);
@@ -477,9 +547,13 @@ namespace BF2VR {
         actions_sync_info.activeActionSets = &active_actionsets;
 
         XrResult xr = xrSyncActions(xrSession, &actions_sync_info);
-        if (xr != XR_SUCCESS) {
+        if (xr != XR_SUCCESS && xr != XR_SESSION_NOT_FOCUSED) {
             log("Failed to sync actions. Skipping motion controls this frame." + std::to_string(xr));
             return false;
+        }
+        else if (xr == XR_SESSION_NOT_FOCUSED)
+        {
+            std::cout << "Mod has no focus. Please return to the game." << std::endl;
         }
 
         // Get hand poses
@@ -517,51 +591,114 @@ namespace BF2VR {
                 }
             }
             {
-                // Get menu button state
+                // Get controller trigger states
 
-                menu_value.type = XR_TYPE_ACTION_STATE_BOOLEAN;
-
-                XrActionStateGetInfo get_info = { XR_TYPE_ACTION_STATE_GET_INFO };
-                get_info.action = menuAction;
-                get_info.subactionPath = handPaths[0];
-                xr = xrGetActionStateBoolean(xrSession, &get_info, &menu_value);
-                if (xr != XR_SUCCESS) {
-                    log("Failed to get value for menu button!");
-                }
-                if (menu_value.currentState && !pressingMenu)
-                {
-                    log("Toggled menu");
-                    pressingMenu = true;
-                    Menu = !Menu;
-                    GameService::SetMenu(Menu);
-                }
-                if (!menu_value.currentState && pressingMenu)
-                {
-                    pressingMenu = false;
-                }
-
-            }
-            {
-                // Get walking state
-
-                menu_value.type = XR_TYPE_ACTION_STATE_VECTOR2F;
+                grip_value[i].type = XR_TYPE_ACTION_STATE_FLOAT;
 
                 XrActionStateGetInfo get_info = { XR_TYPE_ACTION_STATE_GET_INFO };
-                get_info.action = walkAction;
-                get_info.subactionPath = handPaths[0];
-                xr = xrGetActionStateVector2f(xrSession, &get_info, &walk_value);
+                get_info.action = gripAction;
+                get_info.subactionPath = handPaths[i];
+                xr = xrGetActionStateFloat(xrSession, &get_info, &grip_value[i]);
                 if (xr != XR_SUCCESS) {
-                    log("Failed to get value for the left thumbstick!");
+                    log("Failed to get value for a grip!");
                 }
-
-                // Set the xinput state
-
-                InputService::lX = walk_value.currentState.x * 32767;
-                InputService::lY = walk_value.currentState.y * 32767;
-
-
             }
         }
+
+        {
+            // Get menu button state
+
+            menu_value.type = XR_TYPE_ACTION_STATE_BOOLEAN;
+
+            XrActionStateGetInfo get_info = { XR_TYPE_ACTION_STATE_GET_INFO };
+            get_info.action = menuAction;
+            get_info.subactionPath = handPaths[0];
+            xr = xrGetActionStateBoolean(xrSession, &get_info, &menu_value);
+            if (xr != XR_SUCCESS) {
+                log("Failed to get value for menu button!");
+            }
+            if (menu_value.currentState && !pressingMenu)
+            {
+                log("Toggled menu");
+                pressingMenu = true;
+                Menu = !Menu;
+                GameService::SetMenu(Menu);
+            }
+            if (!menu_value.currentState && pressingMenu)
+            {
+                pressingMenu = false;
+            }
+
+        }
+
+
+        {
+            // Get roll button state
+
+            roll_value.type = XR_TYPE_ACTION_STATE_BOOLEAN;
+
+            XrActionStateGetInfo get_info = { XR_TYPE_ACTION_STATE_GET_INFO };
+            get_info.action = rollAction;
+            get_info.subactionPath = handPaths[1];
+            xr = xrGetActionStateBoolean(xrSession, &get_info, &roll_value);
+            if (xr != XR_SUCCESS) {
+                log("Failed to get value for roll button!");
+            }
+
+        }
+
+        {
+            // Get jump button state
+
+            jump_value.type = XR_TYPE_ACTION_STATE_BOOLEAN;
+
+            XrActionStateGetInfo get_info = { XR_TYPE_ACTION_STATE_GET_INFO };
+            get_info.action = jumpAction;
+            get_info.subactionPath = handPaths[1];
+            xr = xrGetActionStateBoolean(xrSession, &get_info, &jump_value);
+            if (xr != XR_SUCCESS) {
+                log("Failed to get value for jump button!");
+            }
+
+        }
+
+        {
+            // Get walking state
+
+            menu_value.type = XR_TYPE_ACTION_STATE_VECTOR2F;
+
+            XrActionStateGetInfo get_info = { XR_TYPE_ACTION_STATE_GET_INFO };
+            get_info.action = walkAction;
+            get_info.subactionPath = handPaths[0];
+            xr = xrGetActionStateVector2f(xrSession, &get_info, &walk_value);
+            if (xr != XR_SUCCESS) {
+                log("Failed to get value for the left thumbstick!");
+            }
+
+            // Set the xinput state
+
+            InputService::lX = walk_value.currentState.x * 32767;
+            InputService::lY = walk_value.currentState.y * 32767;
+
+        }
+
+        InputService::bL = grab_value[0].currentState * 255;
+        InputService::bR = grab_value[1].currentState * 255;
+
+
+        InputService::buttons = 0x0040; // Always sprint
+        if (roll_value.currentState)
+            InputService::buttons = InputService::buttons | 0x2000;
+        if (jump_value.currentState)
+            InputService::buttons = InputService::buttons | 0x1000;
+        if (grip_value[0].currentState > 0.8)
+            InputService::buttons = InputService::buttons | 0x0100;
+        if (grip_value[1].currentState > 0.8)
+            InputService::buttons = InputService::buttons | 0x0200;
+
+        InputService::Update();
+
+        return true;
     }
 
     bool OpenXRService::UpdatePoses() {
@@ -578,11 +715,11 @@ namespace BF2VR {
 
         const auto [q1, q2, q3, q0] = xrViews.at(CurrentEye).pose.orientation;
         const auto [lx, ly, lz] = xrViews.at(CurrentEye).pose.position;
-        FOV = (xrViews.at(CurrentEye).fov.angleUp - xrViews.at(CurrentEye).fov.angleDown) * 57.2958 * RATIO;
+        FOV = (xrViews.at(CurrentEye).fov.angleUp - xrViews.at(CurrentEye).fov.angleDown) * 57.2958f * RATIO * 1.15f;
 
         Vec3 HMDPosition;
 
-        float scale = 1.1f;
+        float scale = 1.f;
 
         HMDPosition.x = lx * scale;
         HMDPosition.y = ly * scale;
@@ -610,8 +747,7 @@ namespace BF2VR {
         HMDPose[14] = 0;
         HMDPose[15] = 1;
 
-        int hand = !LeftHanded;
-        const auto [hq1, hq2, hq3, hq0] = hand_locations[hand].pose.orientation;
+        const auto [hq1, hq2, hq3, hq0] = hand_locations[1].pose.orientation;
 
 
         Vec4 hudQuat;
@@ -623,35 +759,19 @@ namespace BF2VR {
         hudQuat.y = q2;
         hudQuat.z = q3;
 
-        if (grab_value[0].currentState > 0.5f || grab_value[1].currentState > 0.5f)
+        if (grab_value[1].currentState > 0.5f)
         {
-            if (grab_value[0].currentState > grab_value[1].currentState) {
-                LeftHanded = true;
-            } else if (grab_value[1].currentState > grab_value[0].currentState) {
-                LeftHanded = false;
-            }
 
             if (!Firing)
             {
                 Firing = true;
-
-                // If the trigger is down, quickly point the gun at its direction
-
-                // Press the mouse down
-
-                SetForegroundWindow(OwnWindow);
-
-                INPUT Inputs[1] = { 0 };
-
-                Inputs[0].type = INPUT_MOUSE;
-                Inputs[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
-
-                SendInput(1, Inputs, sizeof(INPUT));
             }
         }
 
         if (Firing)
         {
+            // If the trigger is down, quickly point the gun at its direction
+
             hudQuat.w = hq0;
             hudQuat.x = hq1;
             hudQuat.y = hq2;
@@ -678,23 +798,12 @@ namespace BF2VR {
 
         GameService::UpdateCamera(HMDPosition, HMDPose, yaw, pitch);
 
-        float speed = 1.25;
+        float speed = 1.3;
         DirectXService::crosshairX = (-aimEuler.x + lookEuler.x) * speed;
         DirectXService::crosshairY = (aimEuler.z - lookEuler.z) * speed;
 
-        if (!grab_value[0].currentState > 0.5f && !grab_value[1].currentState > 0.5f && Firing)
+        if (!grab_value[1].currentState > 0.5f && Firing)
         {
-            // Send a shoot event. TODO: Move this to gameservice
-
-            SetForegroundWindow(OwnWindow);
-
-            INPUT Inputs[1] = { 0 };
-
-            Inputs[0].type = INPUT_MOUSE;
-            Inputs[0].mi.dwFlags = MOUSEEVENTF_LEFTUP;
-
-            SendInput(1, Inputs, sizeof(INPUT));
-
             // Set the hud back to the head
 
             hudQuat.w = q0;
@@ -703,7 +812,6 @@ namespace BF2VR {
             hudQuat.z = q3;
 
             Firing = false;
-
         }
 
         return true;

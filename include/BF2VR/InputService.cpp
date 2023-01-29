@@ -1,41 +1,58 @@
 #include "Utils.h"
 #include "InputService.h"
 
+#include <Xinput.h>
+
 namespace BF2VR {
+	bool InputService::Connect() {
 
-	DWORD InputService::detourXInputGetState(DWORD dwUserIndex, XINPUT_STATE* pState)
-	{
-		DWORD toReturn = hookedXInputGetState(dwUserIndex, pState);
+		client = vigem_alloc();
 
-		packet++;
-
-		pState->Gamepad.sThumbLX = lX;
-		pState->Gamepad.sThumbLY = lY;
-		pState->Gamepad.wButtons = 0x0040; // Sprint
-		pState->dwPacketNumber = packet;
-
-		return toReturn;
-	}
-
-	bool InputService::HookXInput() {
-
-		MH_STATUS status = MH_CreateHookApi(L"XINPUT1_4", "XInputGetState", reinterpret_cast<LPVOID>(&detourXInputGetState), reinterpret_cast<LPVOID*>(&hookedXInputGetState));
-		if (status != MH_OK)
+		if (client == nullptr)
 		{
-			log("Could not create hook for xinput" + std::to_string(status));
+			log("Could not allocate memory for ViGEm");
 			return false;
 		}
-		status = MH_EnableHook(MH_ALL_HOOKS);
-		if (status != MH_OK)
+
+		const auto retval = vigem_connect(client);
+		if (!VIGEM_SUCCESS(retval))
 		{
-			log("Could not enable hook for xinput");
+			log("Could not conntect to ViGEm");
 			return false;
 		}
+
+		// Create a controller
+
+		pad = vigem_target_x360_alloc();
+		const auto pir = vigem_target_add(client, pad);
+
+		if (!VIGEM_SUCCESS(pir))
+		{
+			log("Could not plug in ViGEm gamepad");
+			return false;
+		}
+
 		return true;
 	}
 
-	void InputService::UnhookXInput() {
-		MH_DisableHook(&detourXInputGetState);
-		MH_RemoveHook(&detourXInputGetState);
+	void InputService::Update() {
+
+		XINPUT_GAMEPAD gamepad{};
+		gamepad.sThumbLX = lX;
+		gamepad.sThumbLY = lY;
+		gamepad.bRightTrigger = bR;
+		gamepad.bLeftTrigger = bL;
+		gamepad.wButtons = buttons;
+
+		VIGEM_ERROR err = vigem_target_x360_update(client, pad, *reinterpret_cast<XUSB_REPORT*>(&gamepad));
+		if (!VIGEM_SUCCESS(err))
+		{
+			log(std::to_string(err));
+		}
+	}
+
+	void InputService::Disconnect() {
+		vigem_disconnect(client);
+		vigem_free(client);
 	}
 }

@@ -1,7 +1,3 @@
-cbuffer EyeBuffer : register(b0) {
-    bool leftEye;
-}
-
 struct VS_OUTPUT
 {
     float4 Position : SV_Position;
@@ -12,10 +8,10 @@ VS_OUTPUT VS(uint id : SV_VertexID) {
     VS_OUTPUT output;
     output.TexCoords = float2((id << 1) & 2, id & 2);
 
-    float scaleFactor = 1.25;
+    float scaleFactor = 1.15;
 
-    // Right eye from top right
-    float shift = (scaleFactor - 1) * output.TexCoords.x;
+    // Shift to correct crosseyes
+    float shift = (scaleFactor - 1);
     output.Position = float4(output.TexCoords.x * 2 - 1 + shift, -output.TexCoords.y * 2 + 1, 0, 1);
 
     return output;

@@ -64,9 +64,9 @@ DWORD __stdcall mainThread(HMODULE module)
         log("Success");
     }
 
-    log("Attempting to hook XInput ...");
-    if (!InputService::HookXInput()) {
-        log("Unable to Hook XInput.");
+    log("Attempting to start ViGEm ...");
+    if (!InputService::Connect()) {
+        log("Unable to start ViGEm.");
         DirectXService::UnhookDirectX();
         ShutdownNoHooks();
     }

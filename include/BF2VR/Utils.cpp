@@ -34,8 +34,8 @@ namespace BF2VR
         log("Unhooking DirectX");
         DirectXService::UnhookDirectX();
 
-        log("Unhooking XInput");
-        InputService::UnhookXInput();
+        log("Disconnecting ViGEm");
+        InputService::Disconnect();
 
         ShutdownNoHooks();
     }

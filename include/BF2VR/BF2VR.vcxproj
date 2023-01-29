@@ -150,7 +150,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>$(ProjectDir)..\..\lib\minhook.lib;$(ProjectDir)..\..\lib\openxr_loader.lib;$(ProjectDir)..\..\lib\DirectXTK.lib;D3D11.lib;dxguid.lib;D3DCompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(ProjectDir)..\..\lib\minhook.lib;$(ProjectDir)..\..\lib\openxr_loader.lib;$(ProjectDir)..\..\lib\DirectXTK.lib;$(ProjectDir)..\..\lib\ViGEmClient.lib;D3D11.lib;dxguid.lib;D3DCompiler.lib;setupapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
