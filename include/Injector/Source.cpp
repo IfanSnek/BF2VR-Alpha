@@ -6,8 +6,7 @@
 
 using namespace std;
 
-int main()
-{
+int main(){
 	// Get the DLL file path
 	char buffer[MAX_PATH];
 	GetModuleFileNameA(NULL, buffer, MAX_PATH);
