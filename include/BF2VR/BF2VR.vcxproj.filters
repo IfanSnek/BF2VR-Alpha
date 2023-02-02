@@ -41,7 +41,7 @@
     <ClInclude Include="HookHelper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SDK.h">
+    <ClInclude Include="SDKOLD.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\third-party\OpenXR\xrmath.h">
@@ -69,6 +69,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="InputService.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SDK.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Types.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Variations.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

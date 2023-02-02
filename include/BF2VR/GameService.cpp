@@ -15,8 +15,12 @@ namespace BF2VR {
         }
 
         MH_STATUS mh = MH_CreateHook(reinterpret_cast<LPVOID>(OffsetCamera), reinterpret_cast<LPVOID>(&UpdateDetour), reinterpret_cast<LPVOID*>(&UpdateOriginal));
-        if (mh != MH_OK) {
+        if (mh != MH_OK && mh != 9) {
             log("Error hooking BF2 UpdateCamera: " + std::to_string(mh));
+            return false;
+        }
+        else if (mh == 9) {
+            log("Error hooking BF2 UpdateCamera. Try launching the mod again (you can leave the game open). If this doesn't stop, try respawning first.");
             return false;
         }
 
@@ -25,6 +29,7 @@ namespace BF2VR {
             log("Error enabling BF2 UpdateCamera hook: " + std::to_string(mh));
             return false;
         }
+
         return true;
     }
 
@@ -71,7 +76,7 @@ namespace BF2VR {
             return;
         }
 
-        ClientLevel* CurrentLevel = CurrentContext->GetClientLevel();
+        ClientLevel* CurrentLevel = CurrentContext->level;
         if (!IsValidPtr(CurrentLevel)) {
             return;
         }
@@ -96,17 +101,17 @@ namespace BF2VR {
         else
         {
             // Get more members, again, checking along the way
-            PlayerManager* playerManager = CurrentContext->GetPlayerManager();
+            PlayerManager* playerManager = CurrentContext->playerManager;
             if (!IsValidPtr(playerManager)) {
                 return;
             }
 
-            ClientPlayer* player = playerManager->GetLocalPlayer();
+            ClientPlayer* player = playerManager->LocalPlayer;
             if (!IsValidPtr(player)) {
                 return;
             }
 
-            ClientSoldierEntity* soldier = player->GetClientSoldier();
+            ClientSoldierEntity* soldier = player->controlledControllable;
             if (!IsValidPtr(soldier)) {
                 return;
             }
@@ -120,29 +125,85 @@ namespace BF2VR {
             float heightOffset = soldier->HeightOffset;
 
             out.o.x += playerPosition.x;
-            out.o.y += playerPosition.y - heightOffset + 3.5;
+            out.o.y += playerPosition.y - heightOffset + 3;
             out.o.z += playerPosition.z;
 
+            // Update the view angles
+            // Check wich ViewAngle pointer is active. The signature of the active viewangle will start with 12 0xff bytes
 
-            LocalAimer* aimer = LocalAimer::Instance();
+            int matches = 0;
+
+            LocalAimer* aimer = LocalAimer::GetInstance();
             if (!IsValidPtr(aimer))
             {
+                log("Could not find address for LocalAimer. If this shows up a lot, please report this to the dev. Try respawning to see if it temporarially fixes it.");
+                Transform = out;
                 return;
+
             }
 
-            UnknownPtr1* p1 = aimer->UnknownPtr1;
-            if (!IsValidPtr(p1))
+            Alternator* alternator = aimer->alternator;
+            if (!IsValidPtr(alternator))
             {
+                log("Could not find address for Alternator. If this shows up a lot, please report this to the dev. Try respawning to see if it temporarially fixes it.");
+                Transform = out;
                 return;
+
             }
-            UnknownPtr2* p2 = p1->UnknownPtr2;
-            if (!IsValidPtr(p2))
+            if (IsValidPtr(alternator->Primary))
             {
-                return;
+                for (int i = 0; i < 12; i++)
+                {
+                    if (alternator->Primary->Signature[i] == 0xFF)
+                    {
+                        matches++;
+                    }
+                    else {
+                        break;
+                    }
+                }
+                if (matches == 12)
+                {
+                    // Primary is active
+                    alternator->Primary->Pitch = pitch;
+                    alternator->Primary->Yaw = yaw - 3.14;
+                    Transform = out;
+                    return;
+
+                }
+                else {
+                    if (IsValidPtr(alternator->Secondary))
+                    {
+                        matches = 0;
+
+                        for (int i = 0; i < 12; i++)
+                        {
+                            if (alternator->Secondary->Signature[i] == 0xFF)
+                            {
+                                matches++;
+                            }
+                            else {
+                                break;
+                            }
+                        }
+                        if (matches == 12)
+                        {
+                            // Secondary is active
+                            alternator->Secondary->Pitch = pitch;
+                            alternator->Secondary->Yaw = yaw + 3.14;
+                        }
+                        else {
+                            // Uh oh, none are active.
+                            log("Could not find address for the Secondary viewangle. If this shows up a lot, please report this to the dev. Try respawning to see if it temporarially fixes it.");
+                        }
+
+                    }
+                    else {
+                        log("Could not find address for the Secondary angle. If this shows up a lot, please report this to the dev. Try respawning to see if it temporarially fixes it.");
+                    }
+                }
             }
 
-            p2->pitch = pitch;
-            p2->yaw = yaw + 135;
         }
 
         // Update the transform that the CameraHook will use

@@ -1,3 +1,5 @@
+#include "Variations.h"
+
 #include "OpenXRService.h"
 #include "InputService.h"
 
@@ -9,6 +11,7 @@
 #include "DirectXService.h"
 #include "GameService.h"
 #include "Utils.h"
+#include "SDKOLD.h"
 
 namespace BF2VR {
     bool OpenXRService::CreateXRInstanceWithExtensions() {
@@ -715,7 +718,11 @@ namespace BF2VR {
 
         const auto [q1, q2, q3, q0] = xrViews.at(CurrentEye).pose.orientation;
         const auto [lx, ly, lz] = xrViews.at(CurrentEye).pose.position;
-        FOV = (xrViews.at(CurrentEye).fov.angleUp - xrViews.at(CurrentEye).fov.angleDown) * 57.2958f * RATIO * 1.15f;
+        FOV = (xrViews.at(CurrentEye).fov.angleUp - xrViews.at(CurrentEye).fov.angleDown) * 57.2958f * RATIO;
+
+#ifdef OCULUSFIX
+            FOV *= 1.15;
+#endif  
 
         Vec3 HMDPosition;
 
@@ -794,6 +801,7 @@ namespace BF2VR {
         Vec3 lookEuler = EulerFromQuat(lookQuat);
 
         float yaw = -hudEuler.x;
+        
         float pitch = hudEuler.z;
 
         GameService::UpdateCamera(HMDPosition, HMDPose, yaw, pitch);

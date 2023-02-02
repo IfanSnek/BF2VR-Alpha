@@ -1,3 +1,4 @@
+#include "Variations.h"
 #include "DirectXService.h"
 #include "PixelShader.h"
 #include "VSR.h"
@@ -190,7 +191,10 @@ namespace BF2VR {
         m_batch->Begin();
 
         float lineLength = 0.1f;
-        float shift = (OpenXRService::LeftEye ? 0.f : -0.3f);
+        float shift = 0;
+#ifdef  OCULUSFIX
+        shift = (OpenXRService::LeftEye ? .15f : -.15f);
+#endif
         shift += crosshairX;
 
         DirectX::VertexPositionColor v1(DirectX::SimpleMath::Vector3(shift - lineLength, crosshairY + 0.003f, 0), DirectX::Colors::Green);

@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 #include "HookHelper.h"
-#include "SDK.h"
+#include "Types.h"
 #include <fstream>
 
 namespace BF2VR {
