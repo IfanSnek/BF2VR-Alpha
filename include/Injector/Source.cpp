@@ -2,6 +2,7 @@
 #include <Windows.h>
 #include <TlHelp32.h>
 #include <Shlwapi.h>
+#include "resource.h"
 #pragma comment(lib, "Shlwapi.lib")
 
 using namespace std;

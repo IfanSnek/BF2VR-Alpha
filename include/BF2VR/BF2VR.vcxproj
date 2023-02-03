@@ -152,6 +152,9 @@
       <EnableUAC>false</EnableUAC>
       <AdditionalDependencies>$(ProjectDir)..\..\lib\minhook.lib;$(ProjectDir)..\..\lib\openxr_loader.lib;$(ProjectDir)..\..\lib\DirectXTK.lib;$(ProjectDir)..\..\lib\ViGEmClient.lib;D3D11.lib;dxguid.lib;D3DCompiler.lib;setupapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>copy "$(SOLUTIONDIR)x64\Release\BF2VR.dll" "$(SOLUTIONDIR)bin"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="DirectXService.cpp" />
@@ -170,6 +173,7 @@
     <ClInclude Include="Matrices.h" />
     <ClInclude Include="OpenXRService.h" />
     <ClInclude Include="PixelShader.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="SDK.h" />
     <ClInclude Include="SDKOLD.h" />
     <ClInclude Include="HookHelper.h" />
