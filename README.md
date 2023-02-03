@@ -8,7 +8,7 @@ Battlefront II VR (BF2VR) is a project by developer, musician, and Star Wars ent
 
 BF2VR started with code from [OpenGameCamera](https://github.com/coltonon/OpenGameCamera) to position the Battlefront Camera to the transformation matrix from the OpenVR API. The game's DirectX calls were intercepted to get access to the framebuffer, which was then sent to the VR screen. Stereoscopy was provided using Alternate Eye Rendering, a technique in which the rendered eye alternates every frame while the game camera shifts left and right to give a sense of depth. The games "Soldier" was also hooked to aim where the player looked.
 
-New updates led the mod to be ported to [OpenXR](https://www.khronos.org/openxr/), a standard for XR runtime interaction. This improves performance and compatibility. Motion controlls were added, allowing the player to aim with a controller rather that the headset. A menu mode was added to allow the player to interact with game menus without having to remove the headset.
+New updates led the mod to be ported to [OpenXR](https://www.khronos.org/openxr/), a standard for XR runtime interaction. This improves performance and compatibility. Motion controlls were added, allowing the player to aim with a controller rather that the headset.
 
 BF2VR is in early alpha, with frequent updates but limited features. Releases to the mod can be found at Ethan's [Discord Server](https://discord.gg/mrKYwzd3N4). Keep in mind that the mod is unstable, and you won't get all the features a VR mod should include just yet.
 
@@ -28,23 +28,14 @@ After downloading the latest zip file from the [releases channel](https://discor
 Note: Your antivirus may flag my mod, this is only because the injection technique is commonly used by malware to take over certain apps. In this case I only use it to take over the game, just to enable VR support. As long as you only downloaded the mod from my Discord server, you will be fine. You may have to add the AlphaXYZ folder to your antivirus exclusion list.
 
 ## First time setup
+
 First launch Battlefront from whatever launcher you have (pirated copies won't work). You will then need to start your OpenXR runtime (Oculus, SteamVR, etc.). Once the game is loaded to the main menu and you can see your menu area on your VR headset, you may open Launcher.exe. You willl see a window pop up quickly, then a new logging window will appear on the game window. The game will resize to a square (for VR rendering), and the logging window will quickly display the startup checks. 
+
+If you have an older version of the mod, delete `config.txt` so the new one can generate.
 
 ### Errors
 
-If you see an error repeating over and over, please close the game and look in the game's installation folder for a file called `logs.txt`. You should send this file to me on my Discord server. If it is too large to send, then delete the repeating error but leave the first line of it. Here are some common errors:
-
-* Failed to create OpenXR xrInstance
-
-This means the headset is not attached, the XR runtime is not active, or some part of your VR wasn't set up yet. If this is not the case, please send me your logs. The number in the message corresponds with [these problems](https://registry.khronos.org/OpenXR/specs/0.90/man/html/XrResult.html).
-
-* Error hooking BF2 UpdateCamera: 9
-
-This means the game camera couldn't be hooked. Please try restarting the game and mod.
-
-* Failed to render a frame
-
-This just means a frame was skipped. If it only happens a bit, it is fine. This should not be happening every frame.
+If you see an error repeating over and over, please close the game and look in the game's installation folder for a file called `logs.txt`. You should send this file to me on my Discord server. If it is too large to send, then delete the repeating error but leave the first line of it. Common errors are automatically diagnosed, so read the logs.
 
 ### Auto configuration
 
@@ -70,87 +61,47 @@ The code is split into the launcher and the mod DLL. The laucher is a single sim
 The different parts of the mod each have their own class in the BF2VR namespace. These "services" are:
 
 ### DirectXService
-####  DirectXService::PresentDetour
-This has the detour for the DirectX present function. It will call `OpenXRService::BeginFrameAndGetVectors` and ` OpenXRService::UpdateActions` on the first of every other frame (when the left eye is rendering). It will then call `OpenXRService::SubmitFrame` passing the framebuffer, and ont he second of evey other frame (right eye), it will call `OpenXRService::EndFrame`. The eyes are then switched.
-
-#### DirectXService::HookDirectX
-This created a dummy D3D11 device and attaches it to the game's device. It then hooks present which starts the `DirectXService::PresentDetour` documented above.
-
-#### DirectXService::UnhookDirectX
-This unhooks `DirectXService::PresentDetour` and releases all resources.
-
-#### DirectXService::RenderOverlays
-This draws overlays using the [DirectXTK](https://github.com/microsoft/DirectXTK) library. Examples include the crosshair.
-
-#### DirectXService::RenderXRFrame
-This draws the passed texture onto the passed render target view. The rtv is for OpenXR's swapchain. This will also call `DirectXService::RenderOverlays` at one point.
-
-### GameService
-
-#### GameService::CaptureOrigin
-This sets the global variable `Origin` to the current camera transform.
-
-#### GameService::HookCamera()
-This will first Capture the origin then create a hook for the game's camera update, detouring it to `GameService::UpdateDetour`
-
-#### GameService::UpdateDetour
-This will check if the current camera is the view camera, and if so, set the view camera's transform to the global variable `Transform`. It will then call the original function.
-
-#### GameService::UpdateCamera
-This will calculate the view from the provided parameters, and apply it to the global variable `Transform`. It also sets the FOV, and log level changes. If the player is in a match, it uses the soldier's position to help set `Transform`. It also sets the player's aim from the provided `pitch` and `yaw`.
-
-#### GameService::Reposition
-This will make the camera and solider's aim return to their original unmodded positions. It captures the positions and sets some global offset variables to the difference. It then reenables the aim and camera.
+This is responsible for managing hooks and calls related to DirectX. This includes:
+* Hooking `Present()` from the original game.
+* Drawing the presented buffer onto a fullscreen quad for OpenXR
+* Drawing the crosshair over the quad.
 
 ### OpenXRService
+This is responsible for OpenXR code including:
+* Initialization
+* Reading input
+* Submitting frames
 
-#### OpenXRService::CreateXRInstanceWithExtensions
-This will initialize OpenXR and enable the extensions the mod needs.
+### GameService
+This manages hooks and memory structure as defined in `sdk.h`. Things like:
+* Setting the render view matrix.
+* Setting the aim rotation.
+* Toggling visibility of the game UI.
 
-#### OpenXRService::BeginXRSession
-This will create the `xrSession`, reference space, and swapchains. It will call `PrepareActions` and set `VRReady` to true, enabling a lot of other functions like the present hook.
-
-#### OpenXRService::PrepareActions()
-This will register and enable OpenXR inputs the mod will need, such as the hand poses, trigger values, etc.
-
-#### OpenXRService::BeginFrameAndGetVectors
-This will call `xrBeginFrame` which tells the runtime that the frame is going to be rendered. It also locates the eye views for the HMD.
-
-#### OpenXRService::SubmitFrame
-This will wait for the frame to be ready for rendering, and call `DirectXService::RenderXRFrame` on the current eye. It will then release the frame.
-
-#### OpenXRService::UpdateActions
-This will sync the OpenXR actions such as hand pose and retreive the values.
-
-#### OpenXRService::UpdatePoses()
-This will reconfigure the config file if necessary, and calculate the view matrix from the HMD pose and Origin. If the triggers are pulled, it will set the soldier aim to the controller's orientation and simulate a mouse click to fire the blaster. It will also set the global crosshair postion values that`DirectXService::RenderOverlays` uses.
-
-#### OpenXRService::EndFrame
-This will call ``xrEndFrame`` with the appropriate info.
-
-#### OpenXRService::EndXR
-This will shut down and end the OpenXR session.
+### InputService
+Manages gamepad input using [ViGEm](https://github.com/ViGEm/ViGEmBus).
 
 ### Utils
-#### log
-Logs a message to the console and `logs.txt`
+Here are some useful utilities
+* #### log (and others)
+Logs a message to the console and `logs.txt`. Styles text color based on the logging type.
 
-#### IsValidPtr
-Checks if a pointer is not null and is legit
+* #### IsValidPtr
+Checks if a pointer is not null and has a valid memory range.
 
-#### Shutdown
-Attempts to eject the mod
+* #### Shutdown
+Attempts to eject the mod from a hooked state by shutting down used hooks.
 
-#### ShutdownNoHooks
+* #### ShutdownNoHooks
 Attempts to shutdown the mod from a non-hooked state.
 
-#### LoadConfig
+* #### LoadConfig
 Opens `config.txt` and loads its values to global variables. If the file doesn't exist, it will put the mod in autoconfig mode and want the user.
 
-#### SaveConfig
+* #### SaveConfig
 Saves certain global variables to `config.txt`
 
-#### EulerFromQuat
+* #### EulerFromQuat
 Calculates an euler vector from a quaternion.
 
 ### dllmain
@@ -162,10 +113,9 @@ It will try to call `OpenXRService::CreateXRInstanceWithExtensions` and call `Sh
 
 It will wait for a few frames to render then capture the origin. It will try to call `GameService::HookCamera` and call `Shutdown` (with hooks) if that fails.
 
-It will then run an infinite loop, calling `GameService::Reposition` if the HOME key is pressed and shutting down if the END key is presed.
+It will then run an infinite loop, shutting down if the END key is presed.
 
 # Credits
 * [OpenGameCamera](https://github.com/coltonon/OpenGameCamera/)
 * Some help from [BattleDash](https://github.com/BattleDash)
 * My testers in my Discrod server
-* An aimbot I wont mention (to solve the soldier aiming)
