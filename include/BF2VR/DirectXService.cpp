@@ -1,4 +1,3 @@
-#include "Variations.h"
 #include "DirectXService.h"
 #include "PixelShader.h"
 #include "VertexShader.h"

@@ -175,7 +175,6 @@
     <ClInclude Include="HookHelper.h" />
     <ClInclude Include="Types.h" />
     <ClInclude Include="Utils.h" />
-    <ClInclude Include="Variations.h" />
     <ClInclude Include="Vectors.h" />
     <ClInclude Include="VertexShader.h" />
   </ItemGroup>

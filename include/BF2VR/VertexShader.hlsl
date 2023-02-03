@@ -1,4 +1,3 @@
-#include "Variations.h"
 struct VS_OUTPUT
 {
     float4 Position : SV_Position;
