@@ -43,7 +43,7 @@ namespace BF2VR {
     }
 
     // Function to set the view of the game camera
-    void GameService::UpdateCamera(Vec3 location, Matrix4 HmdRot, float yaw, float pitch) {
+    void GameService::UpdateCamera(Vec3 location, Matrix4 HmdRot, float yaw, float pitch, Vec3 gunPos, Vec4 gunRot) {
         GameRenderer* pGameRenderer = GameRenderer::GetInstance();
         if (!IsValidPtr(pGameRenderer))
         {
@@ -54,7 +54,11 @@ namespace BF2VR {
         {
             return;
         }
-        pSettings->forceFov = FOV;
+
+        if (!NOFOV)
+        {
+            pSettings->forceFov = FOV;
+        }
 
         HmdRot.invert();
 
@@ -97,6 +101,9 @@ namespace BF2VR {
         if (strcmp(levelname, "Levels/FrontEnd/FrontEnd") == 0)
         {
             out.o.y -= 3.5;
+
+            // Update the transform that the CameraHook will use
+            Transform = out;
         }
         else
         {
@@ -128,6 +135,9 @@ namespace BF2VR {
             out.o.y += playerPosition.y - heightOffset + 3;
             out.o.z += playerPosition.z;
 
+            // Update the transform that the CameraHook will use
+            Transform = out;
+
             // Update the view angles
             // Check wich ViewAngle pointer is active. The signature of the active viewangle will start with 12 0xff bytes
 
@@ -137,7 +147,6 @@ namespace BF2VR {
             if (!IsValidPtr(aimer))
             {
                 log("Could not find address for LocalAimer. If this shows up a lot, please report this to the dev. Try respawning to see if it temporarially fixes it.");
-                Transform = out;
                 return;
 
             }
@@ -146,11 +155,9 @@ namespace BF2VR {
             if (!IsValidPtr(alternator))
             {
                 log("Could not find address for Alternator. If this shows up a lot, please report this to the dev. Try respawning to see if it temporarially fixes it.");
-                Transform = out;
                 return;
 
-            }
-            if (IsValidPtr(alternator->Primary))
+            } else if (IsValidPtr(alternator->Primary))
             {
                 for (int i = 0; i < 12; i++)
                 {
@@ -167,8 +174,6 @@ namespace BF2VR {
                     // Primary is active
                     alternator->Primary->Pitch = pitch;
                     alternator->Primary->Yaw = yaw - 3.14;
-                    Transform = out;
-                    return;
 
                 }
                 else {
@@ -204,12 +209,114 @@ namespace BF2VR {
                 }
             }
 
+            // Update the skeleton 
+            //WIP
+
+
+            return;
+
+            WSClientSoldierEntity* WSsoldier = nullptr;
+
+            if (typeInfoMemberResults.size() == 0)
+            {
+                // This will be slow the first time
+                log("Scanning for player soldier");
+                WSsoldier = GetClassFromName<WSClientSoldierEntity*>(soldier, "WSClientSoldierEntity", 0xFFFFFF, true);
+                log(std::to_string((DWORD64)WSsoldier));
+            }
+            else {
+                WSsoldier = GetClassFromName<WSClientSoldierEntity*>(soldier, "WSClientSoldierEntity");
+            }
+
+
+            if (!IsValidPtr(WSsoldier))
+            {
+                log("Could not find address for the player soldier. 6dof guns won't work this frame.");
+                return;
+            }
+
+            ClientBoneCollisionComponent* Bones = nullptr;
+
+            if (typeInfoMemberResults.size() < 2)
+            {
+                // This will be slow the first time
+                log("Scanning for player skeleton");
+                Bones = GetClassFromName<ClientBoneCollisionComponent*>(WSsoldier, "ClientBoneCollisionComponent", 0xFFFFFF, true);
+                log(std::to_string((DWORD64)Bones));
+            }
+            else {
+                Bones = GetClassFromName<ClientBoneCollisionComponent*>(WSsoldier, "ClientBoneCollisionComponent");
+            }
+
+
+            if (!IsValidPtr(Bones))
+            {
+                log("Could not find address for the player skeleton. 6dof guns won't work this frame.");
+                return;
+            }
+
+            UpdatePoseResultData PoseResult = Bones->m_ragdollTransforms;
+            auto form = PoseResult.m_ActiveWorldTransforms;
+
+
+            if (!IsValidPtr(form))
+            {
+                log("Could not find address for the player gun bone. 6dof guns won't work this frame.");
+                return;
+            }
+
+            log(std::to_string(form[207].m_Rotation.x));
+
+            AnimationSkeleton* pSkeleton = Bones->animationSkeleton;
+            if (!IsValidPtr(pSkeleton))
+            {
+                log("Could not find address for the AnimationSkeleton. 6dof guns won't work this frame.");
+                return;
+            }
+
+
+            SkeletonAsset* skeletonAsset = pSkeleton->skeletonAsset;
+            if (!IsValidPtr(skeletonAsset))
+            {
+                log("Could not find address for the AnimationSkeletonAsset. 6dof guns won't work this frame.");
+                return;
+            }
+
+            int BoneId = -1;
+            for (int i = 0; i < pSkeleton->m_BoneCount; i++)
+            {
+                char* name = skeletonAsset->BoneNames[i];
+                log(name);
+                if (_stricmp(name, "Gun") == 0)
+                    BoneId = i;
+            }
+
+            if (BoneId == -1)
+            { 
+                log("Could not find the gun bone. 6dof guns won't work this frame.");
+                return;
+            }
+
+            PoseResult = Bones->m_ragdollTransforms;
+
+            if (PoseResult.m_ValidTransforms)
+            {
+                UpdatePoseResultData::QuatTransform* pQuat = PoseResult.m_ActiveWorldTransforms;
+                if (!IsValidPtr(pQuat)) {
+                    log("Could not find the gun bone transform. 6dof guns won't work this frame.");
+                    return;
+                }
+                pQuat[BoneId].m_TransAndScale.x = gunPos.x;
+                pQuat[BoneId].m_TransAndScale.y = gunPos.y;
+                pQuat[BoneId].m_TransAndScale.z = gunPos.z;
+                pQuat[BoneId].m_TransAndScale.w = 1;
+
+                pQuat[BoneId].m_Rotation = gunRot;
+            }
         }
 
-        // Update the transform that the CameraHook will use
-        Transform = out;
-
     }
+
 
 
     void GameService::SetMenu(bool enabled) {

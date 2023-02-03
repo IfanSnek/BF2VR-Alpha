@@ -15,7 +15,7 @@ namespace BF2VR
     }
 
     // Check if a pointer is legit
-    bool IsValidPtr(PVOID p) { return (p >= (PVOID)0x10000) && (p < ((PVOID)0x000F000000000000)) && p != nullptr; }
+    bool IsValidPtr(PVOID p) { return (p >= (PVOID)0x10000) && (p < ((PVOID)0x000F000000000000)) && p != nullptr &&!IsBadReadPtr(p, sizeof(PVOID)); }
 
     // Shutdown and eject the mod. Currently only works before DirextX gets hooked.
     void Shutdown() {
@@ -87,9 +87,15 @@ namespace BF2VR
                 MultiLineProperty = "";
             }
             // Boolean parameters
-            else if (FALSE)
+            else if (text == "NOFOV")
             {
-
+                NOFOV = true;
+                log("Manual fov enabled.");
+            }
+            else if (text == "NOHAND")
+            {
+                HEADAIM = true;
+                log("Head aim enabled.");
             }
             // Value parameters
             else

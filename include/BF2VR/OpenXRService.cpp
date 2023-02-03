@@ -755,7 +755,11 @@ namespace BF2VR {
         HMDPose[15] = 1;
 
         const auto [hq1, hq2, hq3, hq0] = hand_locations[1].pose.orientation;
-
+        const auto [hlx, hly, hlz] = hand_locations[1].pose.position;
+        Vec3 aimLoc;
+        aimLoc.x = hlx;
+        aimLoc.y = hly;
+        aimLoc.z = hlz;
 
         Vec4 hudQuat;
         Vec4 aimQuat;
@@ -779,10 +783,13 @@ namespace BF2VR {
         {
             // If the trigger is down, quickly point the gun at its direction
 
-            hudQuat.w = hq0;
-            hudQuat.x = hq1;
-            hudQuat.y = hq2;
-            hudQuat.z = hq3;
+            if (!HEADAIM)
+            {
+                hudQuat.w = hq0;
+                hudQuat.x = hq1;
+                hudQuat.y = hq2;
+                hudQuat.z = hq3;
+            }
         }
 
         lookQuat.w = q0;
@@ -804,7 +811,7 @@ namespace BF2VR {
         
         float pitch = hudEuler.z;
 
-        GameService::UpdateCamera(HMDPosition, HMDPose, yaw, pitch);
+        GameService::UpdateCamera(HMDPosition, HMDPose, yaw, pitch, aimLoc, aimQuat);
 
         float speed = 1.3;
         DirectXService::crosshairX = (-aimEuler.x + lookEuler.x) * speed;
