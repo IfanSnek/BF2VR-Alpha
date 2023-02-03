@@ -80,15 +80,15 @@
     <ClInclude Include="Variations.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="VertexShader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="PixelShader.hlsl">
       <Filter>Resource Files</Filter>
     </FxCompile>
-    <FxCompile Include="VertexShaderRight.hlsl">
-      <Filter>Resource Files</Filter>
-    </FxCompile>
-    <FxCompile Include="VertexShaderLeft.hlsl">
+    <FxCompile Include="VertexShader.hlsl">
       <Filter>Resource Files</Filter>
     </FxCompile>
   </ItemGroup>

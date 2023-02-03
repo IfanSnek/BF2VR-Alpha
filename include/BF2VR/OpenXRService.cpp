@@ -25,7 +25,7 @@ namespace BF2VR {
         uint32_t extensionCount = 0;
         XrResult xr = xrEnumerateInstanceExtensionProperties(nullptr, 0, &extensionCount, nullptr);
         if (xr != XR_SUCCESS) {
-            log("Could not query OpenXR extension count");
+            error("Could not query OpenXR extension count.");
             return false;
         }
 
@@ -33,7 +33,7 @@ namespace BF2VR {
         xr = xrEnumerateInstanceExtensionProperties(nullptr, extensionCount, &extensionCount, allExtensions.data());
 
         if (xr != XR_SUCCESS) {
-            log("Could not query OpenXR extensions");
+            error("Could not query OpenXR extensions.");
             return false;
         }
 
@@ -47,7 +47,7 @@ namespace BF2VR {
         }
 
         if (std::find(enabledExtensions.begin(), enabledExtensions.end(), XR_KHR_D3D11_ENABLE_EXTENSION_NAME) == enabledExtensions.end())  {
-            log("the active OpenXR runtime does not support D3D11");
+            error("The active OpenXR runtime does not support D3D11.");
             return false;
         }
 
@@ -57,11 +57,15 @@ namespace BF2VR {
         createInfo.applicationInfo.apiVersion = XR_CURRENT_API_VERSION;
         strcpy_s(createInfo.applicationInfo.applicationName, "Star Wars Battlefront II VR");
         xr = xrCreateInstance(&createInfo, &xrInstance);
-        if (xr != XR_SUCCESS) {
-            log("Failed to create OpenXR xrInstance");
-            log(std::to_string(xr));
+        if (xr != XR_SUCCESS && xr != XR_ERROR_RUNTIME_FAILURE) {
+            error("Failed to create OpenXR xrInstance. Error: " + std::to_string(xr));
             return false;
 
+        }
+        else if (xr == XR_ERROR_RUNTIME_FAILURE)
+        {
+            error("Failed to create OpenXR xrInstance. Is your runtime (eg. SteamVR) running first?");
+            return false;
         }
 
         // Load D3D11 extension
@@ -70,7 +74,7 @@ namespace BF2VR {
         xr = xrGetInstanceProcAddr(xrInstance, "xrGetD3D11GraphicsRequirementsKHR",
             reinterpret_cast<PFN_xrVoidFunction*>(&xrExtGetD3D11GraphicsRequirements));
         if (xr != XR_SUCCESS) {
-            log("Could not get address for xrGetD3D11GraphicsRequirementsKHR");
+            error("Could not get address for xrGetD3D11GraphicsRequirementsKHR");
             return false;
 
         }
@@ -79,7 +83,7 @@ namespace BF2VR {
         systemInfo.formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
         xr = xrGetSystem(xrInstance, &systemInfo, &xrSystemId);
         if (xr != XR_SUCCESS) {
-            log("Could not get XR system");
+            error("Could not get XR system. Error: " + std::to_string(xr));
             return false;
 
         }
@@ -87,7 +91,7 @@ namespace BF2VR {
         uint32_t blendCount = 0;
         xr = xrEnumerateEnvironmentBlendModes(xrInstance, xrSystemId, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, 1, &blendCount, &xrBlend);
         if (xr != XR_SUCCESS) {
-            log("Could not get XR blend modes");
+            error("Could not get XR blend modes. Error: " + std::to_string(xr));
             return false;
 
         }
@@ -96,7 +100,7 @@ namespace BF2VR {
         xr = xrExtGetD3D11GraphicsRequirements(xrInstance, xrSystemId, &graphicsRequirements);
 
         if (xr != XR_SUCCESS) {
-            log("Could not get XR graphic requirements");
+            error("Could not get XR graphic requirements. Error: " + std::to_string(xr));
             return false;
 
         }
@@ -113,7 +117,7 @@ namespace BF2VR {
         xrSessionInfo.systemId = xrSystemId;
         XrResult xr = xrCreateSession(xrInstance, &xrSessionInfo, &xrSession);
         if (xr != XR_SUCCESS) {
-            log("Failed to create OpenXR xrSession " + std::to_string(xr));
+            error("Failed to create OpenXR xrSession. Error: " + std::to_string(xr));
             return false;
         }
 
@@ -122,7 +126,7 @@ namespace BF2VR {
         spaceInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_LOCAL;
         xr = xrCreateReferenceSpace(xrSession, &spaceInfo, &xrAppSpace);
         if (xr != XR_SUCCESS) {
-            log("Could not create OpenXR reference space");
+            error("Could not create OpenXR reference space. Error: " + std::to_string(xr));
             return false;
         }
 
@@ -130,7 +134,7 @@ namespace BF2VR {
 
         xr = xrEnumerateViewConfigurationViews(xrInstance, xrSystemId, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, 0, &xrViewCount, nullptr);
         if (xr != XR_SUCCESS) {
-            log("Could not enumerate OpenXR view configuration view count");
+            error("Could not get OpenXR view configuration view count. Error: " + std::to_string(xr));
             return false;
         }
 
@@ -139,7 +143,7 @@ namespace BF2VR {
 
         xr = xrEnumerateViewConfigurationViews(xrInstance, xrSystemId, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, xrViewCount, &xrViewCount, xrConfigViews.data());
         if (xr != XR_SUCCESS) {
-            log("Could not enumerate OpenXR view configuration views");
+            error("Could not enumerate OpenXR view configuration views. Error: " + std::to_string(xr));
             return false;
         }
 
@@ -160,14 +164,14 @@ namespace BF2VR {
 
             XrResult result = xrCreateSwapchain(xrSession, &swapchainInfo, &swapchain);
             if (xr != XR_SUCCESS) {
-                log("Could not create XR swapchain.");
+                error("Could not create XR swapchain. Error: " + std::to_string(xr));
                 return false;
             }
 
             uint32_t surfaceCount;
             xr = xrEnumerateSwapchainImages(swapchain, 0, &surfaceCount, nullptr);
             if (xr != XR_SUCCESS) {
-                log("Could not enumerate OpenXR swapchain image count: " + std::to_string(xr));
+                error("Could not enumerate OpenXR swapchain image count. Error: " + std::to_string(xr));
                 return false;
             }
 
@@ -175,7 +179,7 @@ namespace BF2VR {
             surfaces.resize(surfaceCount, { XR_TYPE_SWAPCHAIN_IMAGE_D3D11_KHR });
             xr = xrEnumerateSwapchainImages(swapchain, surfaceCount, &surfaceCount, reinterpret_cast<XrSwapchainImageBaseHeader*>(surfaces.data()));
             if (xr != XR_SUCCESS) {
-                log("Could not enumerate OpenXR swapchain images");
+                error("Could not enumerate OpenXR swapchain images Error: " + std::to_string(xr));
                 return false;
             }
 
@@ -189,7 +193,7 @@ namespace BF2VR {
                 ID3D11RenderTargetView* rtv;
                 HRESULT hr = DirectXService::pDevice->CreateRenderTargetView(surface.texture, &rtvDesc, &rtv);
                 if (hr != S_OK) {
-                    log("Failed to create an RTV for OpenXR");
+                    error("Failed to create an RTV for OpenXR. Error: " + std::to_string(xr));
                     return false;
                 }
                 rtvs.push_back(rtv);
@@ -203,7 +207,7 @@ namespace BF2VR {
         beginInfo.primaryViewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
         xr = xrBeginSession(xrSession, &beginInfo);
         if (xr != XR_SUCCESS) {
-            log("Could not begin XR xrSession.");
+            error("Could not begin XR xrSession. Error: " + std::to_string(xr));
             return false;
         }
 
@@ -227,7 +231,7 @@ namespace BF2VR {
 
         XrResult xr = xrCreateActionSet(xrInstance, &actionSetInfo, &actionSet);
         if (xr != XR_SUCCESS) {
-            log("Action set not created, motion controlls will not work.");
+            warn("Action set not created, motion controlls will not work. Error: " + std::to_string(xr));
             return false;
         }
 
@@ -246,7 +250,7 @@ namespace BF2VR {
             strcpy(actionInfo.localizedActionName, "Hand Pose");
             xr = xrCreateAction(actionSet, &actionInfo, &poseAction);
             if (xr != XR_SUCCESS) {
-                log("Failed to create pose action, motion controlls will not work.");
+                warn("Failed to create pose action, motion controlls will not work. Error: " + std::to_string(xr));
                 return false;
             }
         }
@@ -265,7 +269,7 @@ namespace BF2VR {
             strcpy(actionInfo.localizedActionName, "Fire Gun");
             xr = xrCreateAction(actionSet, &actionInfo, &triggerAction);
             if (xr != XR_SUCCESS) {
-                log("Failed to create pose action for trigger, motion controlls will not work " + std::to_string(xr));
+                warn("Failed to create pose action for trigger, motion controlls will not work. Error: " + std::to_string(xr));
                 return false;
             }
         }
@@ -284,7 +288,7 @@ namespace BF2VR {
             strcpy(actionInfo.localizedActionName, "Left Right and Middle Abilities");
             xr = xrCreateAction(actionSet, &actionInfo, &gripAction);
             if (xr != XR_SUCCESS) {
-                log("Failed to create pose action for grip, motion controlls will not work " + std::to_string(xr));
+                warn("Failed to create pose action for grip, motion controlls will not work. Error: " + std::to_string(xr));
                 return false;
             }
         }
@@ -300,7 +304,7 @@ namespace BF2VR {
             strcpy(actionInfo.localizedActionName, "Toggle Menu");
             xr = xrCreateAction(actionSet, &actionInfo, &menuAction);
             if (xr != XR_SUCCESS) {
-                log("Failed to create pose action for menu, menu mode will not work " + std::to_string(xr));
+                warn("Failed to create pose action for menu, menu mode will not work. Error: " + std::to_string(xr));
                 return false;
             }
         }
@@ -316,7 +320,7 @@ namespace BF2VR {
             strcpy(actionInfo.localizedActionName, "Battle Roll");
             xr = xrCreateAction(actionSet, &actionInfo, &rollAction);
             if (xr != XR_SUCCESS) {
-                log("Failed to create pose action for roll, battle roll will not work " + std::to_string(xr));
+                warn("Failed to create pose action for roll, battle roll will not work. Error: " + std::to_string(xr));
                 return false;
             }
         }
@@ -332,7 +336,7 @@ namespace BF2VR {
             strcpy(actionInfo.localizedActionName, "Jump");
             xr = xrCreateAction(actionSet, &actionInfo, &jumpAction);
             if (xr != XR_SUCCESS) {
-                log("Failed to create pose action for jump, jumping will not work " + std::to_string(xr));
+                warn("Failed to create pose action for jump, jumping will not work. Error: " + std::to_string(xr));
                 return false;
             }
         }
@@ -348,7 +352,7 @@ namespace BF2VR {
             strcpy(actionInfo.localizedActionName, "Walk");
             xr = xrCreateAction(actionSet, &actionInfo, &walkAction);
             if (xr != XR_SUCCESS) {
-                log("Failed to create pose action for menu, menu mode will not work " + std::to_string(xr));
+                warn("Failed to create pose action for menu, menu mode will not work. Error: " + std::to_string(xr));
                 return false;
             }
         }
@@ -363,7 +367,7 @@ namespace BF2VR {
         XrPath interaction_profile_path;
         xr = xrStringToPath(xrInstance, "/interaction_profiles/oculus/touch_controller", &interaction_profile_path);
         if (xr != XR_SUCCESS) {
-            log("Failed to get interaction profile, motion controlls will not work.");
+            warn("Failed to get interaction profile, motion controlls will not work. Error: " + std::to_string(xr));
             return false;
         }
 
@@ -414,7 +418,7 @@ namespace BF2VR {
 
         xrSuggestInteractionProfileBindings(xrInstance, &suggested_bindings);
         if (xr != XR_SUCCESS) {
-            log("Failed to suggest bindings, motion controlls will not work.");
+            warn("Failed to suggest bindings, motion controlls will not work. Error: " + std::to_string(xr));
             return false;
         }
 
@@ -425,7 +429,7 @@ namespace BF2VR {
         actionset_attach_info.actionSets = &actionSet;
         xr = xrAttachSessionActionSets(xrSession, &actionset_attach_info);
         if (xr != XR_SUCCESS) {
-            log("Failed to attach action set, motion controlls will not work.");
+            warn("Failed to attach action set, motion controlls will not work. Error: " + std::to_string(xr));
             return false;
         }
 
@@ -438,7 +442,7 @@ namespace BF2VR {
 
             xr = xrCreateActionSpace(xrSession, &action_space_info, &pose_action_spaces[0]);
             if (xr != XR_SUCCESS) {
-                log("Failed to create left hand pose space, motion controlls will not work.");
+                warn("Failed to create left hand pose space, motion controlls will not work. Error: " + std::to_string(xr));
                 return false;
             }
         }
@@ -451,12 +455,12 @@ namespace BF2VR {
 
             xr = xrCreateActionSpace(xrSession, &action_space_info, &pose_action_spaces[1]);
             if (xr != XR_SUCCESS) {
-                log("Failed to create left hand pose space, motion controlls will not work.");
+                warn("Failed to create left hand pose space, motion controlls will not work. Error: " + std::to_string(xr));
                 return false;
             }
         }
 
-        log("Success");
+        success("VR Actions Created.");
 
         return true;
     }
@@ -468,13 +472,13 @@ namespace BF2VR {
         xrFrameState = { XR_TYPE_FRAME_STATE };
         XrResult xr = xrWaitFrame(xrSession, nullptr, &xrFrameState);
         if (xr != XR_SUCCESS) {
-            log("Could not wait on OpenXR frame");
+            warn("Could not wait on OpenXR frame. Error: " + std::to_string(xr));
             return false;
         }
 
         xr = xrBeginFrame(xrSession, nullptr);
         if (xr != XR_SUCCESS && xr != XR_FRAME_DISCARDED) {
-            log("Could not begin OpenXR frame " + std::to_string(xr));
+            warn("Could not begin OpenXR frame. Error: " + std::to_string(xr));
             return false;
         }
 
@@ -485,7 +489,7 @@ namespace BF2VR {
         locateInfo.space = xrAppSpace;
         xr = xrLocateViews(xrSession, &locateInfo, &viewState, xrViewCount, &xrProjectionViewCount, xrViews.data());
         if (xr != XR_SUCCESS) {
-            log("Could not locate OpenXR views");
+            warn("Could not locate OpenXR views. Error: " + std::to_string(xr));
             return false;
         }
         xrProjectionViews.resize(xrProjectionViewCount);
@@ -513,7 +517,7 @@ namespace BF2VR {
         XrSwapchainImageAcquireInfo acquireInfo = { XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO };
         XrResult xr = xrAcquireSwapchainImage(xrSwapchains.at(currentEye), &acquireInfo, &imageId);
         if (xr != XR_SUCCESS) {
-            log("Could not acquire OpenXR swapchain image" + std::to_string(xr));
+            warn("Could not acquire OpenXR swapchain image. Error: " + std::to_string(xr));
             return false;
         }
 
@@ -521,20 +525,19 @@ namespace BF2VR {
         waitInfo.timeout = XR_INFINITE_DURATION;
         xr = xrWaitSwapchainImage(xrSwapchains.at(currentEye), &waitInfo);
         if (xr != XR_SUCCESS) {
-            log("Could not wait on OpenXR swapchain image" + std::to_string(xr));
+            warn("Could not wait on OpenXR swapchain image. Error: " + std::to_string(xr));
             return false;
         }
 
         if (!DirectXService::RenderXRFrame(texture, xrRTVs.at(currentEye).at(imageId))) {
-            log("Skipped a frame");
-            
+            warn("Skipped a frame.");
         }
 
         // Release the frame
         XrSwapchainImageReleaseInfo releaseInfo = { XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO };
         xr = xrReleaseSwapchainImage(xrSwapchains.at(currentEye), &releaseInfo);
         if (xr != XR_SUCCESS) {
-            log("Could not release OpenXR swapchain image" + std::to_string(xr));
+            warn("Could not release OpenXR swapchain image. Error: " + std::to_string(xr));
             return false;
         }
         return true;
@@ -551,12 +554,12 @@ namespace BF2VR {
 
         XrResult xr = xrSyncActions(xrSession, &actions_sync_info);
         if (xr != XR_SUCCESS && xr != XR_SESSION_NOT_FOCUSED) {
-            log("Failed to sync actions. Skipping motion controls this frame." + std::to_string(xr));
+            warn("Failed to sync actions. Skipping motion controls this frame. Error: " + std::to_string(xr));
             return false;
         }
         else if (xr == XR_SESSION_NOT_FOCUSED)
         {
-            std::cout << "Mod has no focus. Please return to the game." << std::endl;
+            warn("Mod has no focus. Please return to the game.");
         }
 
         // Get hand poses
@@ -569,15 +572,14 @@ namespace BF2VR {
                 get_info.subactionPath = handPaths[i];
                 xr = xrGetActionStatePose(xrSession, &get_info, &pose_state);
                 if (xr != XR_SUCCESS) {
-                    log("Failed to get pose state for a hand! " + std::to_string(xr));
-                    continue;
+                    warn("Failed to get pose state for a hand. Error: " + std::to_string(xr) + ". Hand: " + std::to_string(i + 1));
                 }
 
                 hand_locations[i].type = XR_TYPE_SPACE_LOCATION;
 
                 xr = xrLocateSpace(pose_action_spaces[i], xrAppSpace, xrFrameState.predictedDisplayTime, &hand_locations[i]);
                 if (xr != XR_SUCCESS) {
-                    log("Failed to get pose value for a hand!");
+                    warn("Failed to get pose value for a hand. Error: " + std::to_string(xr) + ". Hand: " + std::to_string(i + 1));
                 }
             }
             {
@@ -590,7 +592,7 @@ namespace BF2VR {
                 get_info.subactionPath = handPaths[i];
                 xr = xrGetActionStateFloat(xrSession, &get_info, &grab_value[i]);
                 if (xr != XR_SUCCESS) {
-                    log("Failed to get value for a trigger!");
+                    warn("Failed to get value for a trigger. Error: " + std::to_string(xr));
                 }
             }
             {
@@ -603,7 +605,7 @@ namespace BF2VR {
                 get_info.subactionPath = handPaths[i];
                 xr = xrGetActionStateFloat(xrSession, &get_info, &grip_value[i]);
                 if (xr != XR_SUCCESS) {
-                    log("Failed to get value for a grip!");
+                    warn("Failed to get value for a grip. Error: " + std::to_string(xr));
                 }
             }
         }
@@ -618,11 +620,11 @@ namespace BF2VR {
             get_info.subactionPath = handPaths[0];
             xr = xrGetActionStateBoolean(xrSession, &get_info, &menu_value);
             if (xr != XR_SUCCESS) {
-                log("Failed to get value for menu button!");
+                warn("Failed to get value for menu button. Error: " + std::to_string(xr));
             }
             if (menu_value.currentState && !pressingMenu)
             {
-                log("Toggled menu");
+                info("Toggled menu.");
                 pressingMenu = true;
                 Menu = !Menu;
                 GameService::SetMenu(Menu);
@@ -645,7 +647,7 @@ namespace BF2VR {
             get_info.subactionPath = handPaths[1];
             xr = xrGetActionStateBoolean(xrSession, &get_info, &roll_value);
             if (xr != XR_SUCCESS) {
-                log("Failed to get value for roll button!");
+                warn("Failed to get value for roll button. Error: " + std::to_string(xr));
             }
 
         }
@@ -660,7 +662,7 @@ namespace BF2VR {
             get_info.subactionPath = handPaths[1];
             xr = xrGetActionStateBoolean(xrSession, &get_info, &jump_value);
             if (xr != XR_SUCCESS) {
-                log("Failed to get value for jump button!");
+                warn("Failed to get value for jump button. Error: " + std::to_string(xr));
             }
 
         }
@@ -675,7 +677,7 @@ namespace BF2VR {
             get_info.subactionPath = handPaths[0];
             xr = xrGetActionStateVector2f(xrSession, &get_info, &walk_value);
             if (xr != XR_SUCCESS) {
-                log("Failed to get value for the left thumbstick!");
+                warn("Failed to get value for the left thumbstick. Error: " + std::to_string(xr));
             }
 
             // Set the xinput state
@@ -709,20 +711,16 @@ namespace BF2VR {
 
         if (Reconfig) {
             RATIO = (xrViews.at(CurrentEye).fov.angleRight - xrViews.at(CurrentEye).fov.angleLeft) / (xrViews.at(CurrentEye).fov.angleUp - xrViews.at(CurrentEye).fov.angleDown);
-            log("The screen aspect ratio of an HMD eye is " + std::to_string(RATIO));
+            info("The screen aspect ratio of an HMD eye is " + std::to_string(RATIO));
             SaveConfig();
-            log("Saved the new config! You may restart the game now.");
-            log("You can try unloading the mod by pressing the END key on your keyboard. This will sometimes crash the game but you might as well try if restarting anyway.");
+            info("Saved the new config! You may restart the game now.");
+            info("You can try unloading the mod by pressing the END key on your keyboard. This will sometimes crash the game but you might as well try if restarting anyway.");
             Reconfig = false;
         }
 
         const auto [q1, q2, q3, q0] = xrViews.at(CurrentEye).pose.orientation;
         const auto [lx, ly, lz] = xrViews.at(CurrentEye).pose.position;
         FOV = (xrViews.at(CurrentEye).fov.angleUp - xrViews.at(CurrentEye).fov.angleDown) * 57.2958f * RATIO;
-
-#ifdef OCULUSFIX
-            FOV *= 1.15;
-#endif  
 
         Vec3 HMDPosition;
 
@@ -846,7 +844,7 @@ namespace BF2VR {
         frameEndInfo.layers = &xrLayer;
         XrResult xr = xrEndFrame(xrSession, &frameEndInfo);
         if (xr != XR_SUCCESS) {
-            log("Could not end OpenXR frame" + std::to_string(xr));
+            warn("Could not end OpenXR frame. Error: " + std::to_string(xr));
             return false;
         }
         return true;
@@ -860,17 +858,17 @@ namespace BF2VR {
         }
         for (uint32_t i = 0; i < xrViewCount; i++) {
             if (xrSwapchains.at(i) != XR_NULL_HANDLE && xrDestroySwapchain(xrSwapchains.at(i)) != XR_SUCCESS) {
-                log("Failed to destroy OpenXR swapchain");
+                error("Failed to destroy OpenXR swapchain.");
             }
         }
-        if (xrAppSpace != nullptr && xrAppSpace != XR_NULL_HANDLE && xrDestroySpace(xrAppSpace) != XR_SUCCESS) {
-            log("Failed to destroy OpenXR app space");
+        if (xrAppSpace != XR_NULL_HANDLE && xrDestroySpace(xrAppSpace) != XR_SUCCESS) {
+            error("Failed to destroy OpenXR app space");
         }
-        if (xrSession != nullptr && xrSession != XR_NULL_HANDLE && xrDestroySession(xrSession) != XR_SUCCESS) {
-            log("Failed to destroy OpenXR session");
+        if (xrSession != XR_NULL_HANDLE && xrDestroySession(xrSession) != XR_SUCCESS) {
+            error("Failed to destroy OpenXR session");
         }
-        if (xrInstance != nullptr && xrInstance != XR_NULL_HANDLE && xrDestroyInstance(xrInstance) != XR_SUCCESS) {
-            log("Failed to destroy OpenXR instance");
+        if (xrInstance != XR_NULL_HANDLE && xrDestroyInstance(xrInstance) != XR_SUCCESS) {
+            error("Failed to destroy OpenXR instance");
         }
     }
 }

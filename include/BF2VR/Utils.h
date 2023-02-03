@@ -14,6 +14,15 @@ namespace BF2VR {
 	static std::ofstream Log("logs.txt", std::ios_base::app);
 
 	void log(std::string message);
+	void error(std::string message);
+
+	static inline int warnCount = 0;
+	static inline std::string lastWarn = "";
+	void warn(std::string message);
+
+	void success(std::string message);
+	void info(std::string message);
+	void deb(std::string message);
 	
 	bool IsValidPtr(PVOID p);
 
@@ -90,7 +99,7 @@ namespace BF2VR {
 						result.offset = offset;
 						result.pVTable = addr;
 						typeInfoMemberResults.push_back(result);
-                        log("Found it.");
+                        success("Found it.");
                         return *(T*)((DWORD64)addr + offset);
                     }
 

@@ -7,6 +7,7 @@
 using namespace BF2VR;
 
 // Our mod thread
+
 DWORD __stdcall mainThread(HMODULE module)
 {
     OwnModule = module;
@@ -15,18 +16,19 @@ DWORD __stdcall mainThread(HMODULE module)
     freopen("CONOUT$", "w", stdout);
 
     time_t my_time = time(NULL);
+    std::cout << "New startup at " << ctime(&my_time) << std::endl;
     Log << std::endl << std::endl << "New startup at " << ctime(&my_time) << std::endl;
 
     log("Attempting to find Battlefront window ...");
     OwnWindow = FindWindowA("Frostbite", "STAR WARS Battlefront II");
     if (!OwnWindow)
     {
-        log("Couldn't find window");
+        error("Couldn't find window.");
         ShutdownNoHooks();
         return 1;
     }
     else {
-        log("Success");
+        success("Found window.");
     }
 
     // Eye resolution stuff
@@ -45,45 +47,45 @@ DWORD __stdcall mainThread(HMODULE module)
 
     log("Attempting to start OpenXR ...");
     if (!OpenXRService::CreateXRInstanceWithExtensions()) {
-        log("Unable to start vr");
+        error("Unable to start vr");
         ShutdownNoHooks();
         return 1;
     }
     else {
-        log("Success");
+        success("Started OpenXR.");
     }
 
     Sleep(100);
 
     log("Attempting to hook DirectX ...");
     if (!DirectXService::HookDirectX(OwnWindow)) {
-        log("Unable to Hook DirectX.");
+        error("Unable to Hook DirectX.");
         ShutdownNoHooks();
     }
     else {
-        log("Success");
+        success("Hooked DirectX.");
     }
 
     log("Attempting to start ViGEm ...");
     if (!InputService::Connect()) {
-        log("Unable to start ViGEm.");
+        error("Unable to start ViGEm.");
         DirectXService::UnhookDirectX();
         ShutdownNoHooks();
     }
     else {
-        log("Success");
+        success("Started ViGEm.");
     }
 
     log("Attempting to hook the BF2 Camera ...");
     if (!GameService::HookCamera()) {
-        log("Unable to Hook the BF2 Camera.");
+        error("Unable to Hook the BF2 Camera.");
         Shutdown();
     }
     else {
-        log("Success");
+        success("Hooked the BF2 Camera.");
     }
 
-    log("Started Sucessfully");
+    info("Started Sucessfully");
 
 
     for (;;) {

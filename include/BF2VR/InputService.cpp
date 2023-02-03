@@ -10,14 +10,14 @@ namespace BF2VR {
 
 		if (client == nullptr)
 		{
-			log("Could not allocate memory for ViGEm");
+			error("Could not allocate memory for ViGEm.");
 			return false;
 		}
 
 		const auto retval = vigem_connect(client);
 		if (!VIGEM_SUCCESS(retval))
 		{
-			log("Could not conntect to ViGEm");
+			error("Could not conntect to ViGEm. Error: " + std::to_string(retval));
 			return false;
 		}
 
@@ -28,7 +28,7 @@ namespace BF2VR {
 
 		if (!VIGEM_SUCCESS(pir))
 		{
-			log("Could not plug in ViGEm gamepad");
+			error("Could not plug in ViGEm gamepad. Error: " + std::to_string(pir));
 			return false;
 		}
 
@@ -47,7 +47,7 @@ namespace BF2VR {
 		VIGEM_ERROR err = vigem_target_x360_update(client, pad, *reinterpret_cast<XUSB_REPORT*>(&gamepad));
 		if (!VIGEM_SUCCESS(err))
 		{
-			log(std::to_string(err));
+			warn("Could not update the virtual gamepad. Error: " + std::to_string(err));
 		}
 	}
 

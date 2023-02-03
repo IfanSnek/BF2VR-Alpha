@@ -10,23 +10,23 @@ namespace BF2VR {
         RenderView = GameRenderer::GetInstance()->renderView;
         if (!IsValidPtr(RenderView))
         {
-            log("Unable to hook camera, Renderview is invalid.");
+            error("Unable to hook camera, Renderview is invalid.");
             return false;
         }
 
         MH_STATUS mh = MH_CreateHook(reinterpret_cast<LPVOID>(OffsetCamera), reinterpret_cast<LPVOID>(&UpdateDetour), reinterpret_cast<LPVOID*>(&UpdateOriginal));
         if (mh != MH_OK && mh != 9) {
-            log("Error hooking BF2 UpdateCamera: " + std::to_string(mh));
+            error("Error hooking BF2 UpdateCamera. Error: " + std::to_string(mh));
             return false;
         }
         else if (mh == 9) {
-            log("Error hooking BF2 UpdateCamera. Try launching the mod again (you can leave the game open). If this doesn't stop, try respawning first.");
+            error("Error hooking BF2 UpdateCamera. Try launching the mod again (you can leave the game open). If this doesn't stop, try respawning first.");
             return false;
         }
 
         mh = MH_EnableHook(reinterpret_cast<LPVOID>(OffsetCamera));
         if (mh != MH_OK) {
-            log("Error enabling BF2 UpdateCamera hook: " + std::to_string(mh));
+            error("Error enabling BF2 UpdateCamera hook. Error: " + std::to_string(mh));
             return false;
         }
 
@@ -94,7 +94,7 @@ namespace BF2VR {
         {
             // Check for when the level name changes
             std::string lvl = levelname;
-            log("Switched to " + lvl);
+            info("Switched to " + lvl);
             Level = levelname;
         }
 
@@ -146,7 +146,7 @@ namespace BF2VR {
             LocalAimer* aimer = LocalAimer::GetInstance();
             if (!IsValidPtr(aimer))
             {
-                log("Could not find address for LocalAimer. If this shows up a lot, please report this to the dev. Try respawning to see if it temporarially fixes it.");
+                warn("Could not find address for LocalAimer. If this shows up a lot, please report this to the dev. Try respawning to see if it temporarially fixes it.");
                 return;
 
             }
@@ -154,7 +154,7 @@ namespace BF2VR {
             Alternator* alternator = aimer->alternator;
             if (!IsValidPtr(alternator))
             {
-                log("Could not find address for Alternator. If this shows up a lot, please report this to the dev. Try respawning to see if it temporarially fixes it.");
+                warn("Could not find address for Alternator. If this shows up a lot, please report this to the dev. Try respawning to see if it temporarially fixes it.");
                 return;
 
             } else if (IsValidPtr(alternator->Primary))
@@ -199,12 +199,12 @@ namespace BF2VR {
                         }
                         else {
                             // Uh oh, none are active.
-                            log("Could not find address for the Secondary viewangle. If this shows up a lot, please report this to the dev. Try respawning to see if it temporarially fixes it.");
+                            warn("Could not find address for the Secondary viewangle. If this shows up a lot, please report this to the dev. Try respawning to see if it temporarially fixes it.");
                         }
 
                     }
                     else {
-                        log("Could not find address for the Secondary angle. If this shows up a lot, please report this to the dev. Try respawning to see if it temporarially fixes it.");
+                        warn("Could not find address for the Secondary angle. If this shows up a lot, please report this to the dev. Try respawning to see if it temporarially fixes it.");
                     }
                 }
             }
@@ -222,7 +222,7 @@ namespace BF2VR {
                 // This will be slow the first time
                 log("Scanning for player soldier");
                 WSsoldier = GetClassFromName<WSClientSoldierEntity*>(soldier, "WSClientSoldierEntity", 0xFFFFFF, true);
-                log(std::to_string((DWORD64)WSsoldier));
+                deb(std::to_string((DWORD64)WSsoldier));
             }
             else {
                 WSsoldier = GetClassFromName<WSClientSoldierEntity*>(soldier, "WSClientSoldierEntity");
@@ -231,7 +231,7 @@ namespace BF2VR {
 
             if (!IsValidPtr(WSsoldier))
             {
-                log("Could not find address for the player soldier. 6dof guns won't work this frame.");
+                warn("Could not find address for the player soldier. 6dof guns won't work this frame.");
                 return;
             }
 
@@ -242,7 +242,7 @@ namespace BF2VR {
                 // This will be slow the first time
                 log("Scanning for player skeleton");
                 Bones = GetClassFromName<ClientBoneCollisionComponent*>(WSsoldier, "ClientBoneCollisionComponent", 0xFFFFFF, true);
-                log(std::to_string((DWORD64)Bones));
+                deb(std::to_string((DWORD64)Bones));
             }
             else {
                 Bones = GetClassFromName<ClientBoneCollisionComponent*>(WSsoldier, "ClientBoneCollisionComponent");
@@ -251,7 +251,7 @@ namespace BF2VR {
 
             if (!IsValidPtr(Bones))
             {
-                log("Could not find address for the player skeleton. 6dof guns won't work this frame.");
+                warn("Could not find address for the player skeleton. 6dof guns won't work this frame.");
                 return;
             }
 
@@ -265,12 +265,12 @@ namespace BF2VR {
                 return;
             }
 
-            log(std::to_string(form[207].m_Rotation.x));
+            deb(std::to_string(form[207].m_Rotation.x));
 
             AnimationSkeleton* pSkeleton = Bones->animationSkeleton;
             if (!IsValidPtr(pSkeleton))
             {
-                log("Could not find address for the AnimationSkeleton. 6dof guns won't work this frame.");
+                warn("Could not find address for the AnimationSkeleton. 6dof guns won't work this frame.");
                 return;
             }
 
@@ -278,7 +278,7 @@ namespace BF2VR {
             SkeletonAsset* skeletonAsset = pSkeleton->skeletonAsset;
             if (!IsValidPtr(skeletonAsset))
             {
-                log("Could not find address for the AnimationSkeletonAsset. 6dof guns won't work this frame.");
+                warn("Could not find address for the AnimationSkeletonAsset. 6dof guns won't work this frame.");
                 return;
             }
 
@@ -286,14 +286,14 @@ namespace BF2VR {
             for (int i = 0; i < pSkeleton->m_BoneCount; i++)
             {
                 char* name = skeletonAsset->BoneNames[i];
-                log(name);
+                deb(name);
                 if (_stricmp(name, "Gun") == 0)
                     BoneId = i;
             }
 
             if (BoneId == -1)
             { 
-                log("Could not find the gun bone. 6dof guns won't work this frame.");
+                warn("Could not find the gun bone. 6dof guns won't work this frame.");
                 return;
             }
 
@@ -303,7 +303,7 @@ namespace BF2VR {
             {
                 UpdatePoseResultData::QuatTransform* pQuat = PoseResult.m_ActiveWorldTransforms;
                 if (!IsValidPtr(pQuat)) {
-                    log("Could not find the gun bone transform. 6dof guns won't work this frame.");
+                    warn("Could not find the gun bone transform. 6dof guns won't work this frame.");
                     return;
                 }
                 pQuat[BoneId].m_TransAndScale.x = gunPos.x;
@@ -323,7 +323,7 @@ namespace BF2VR {
         UISettings* pUISettings = UISettings::GetInstance();
         if (!IsValidPtr(pUISettings))
         {
-            log("UI pointer invalid");
+            warn("UI pointer invalid. Cannot toggle.");
             return;
         }
         pUISettings->drawEnable = enabled;
