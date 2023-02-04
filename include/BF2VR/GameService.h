@@ -14,7 +14,7 @@ namespace BF2VR {
 
 		static bool HookCamera();
 
-		static void UpdateCamera(Vec3 location, Matrix4 matrix, float yaw, float pitch);
+		static void UpdateCamera(Vec3 location, Matrix4 matrix, float yaw, float pitch, Vec3 gunPos, Vec4 gunRot);
 
 		static void SetMenu(bool enabled);
 

@@ -152,6 +152,9 @@
       <EnableUAC>false</EnableUAC>
       <AdditionalDependencies>$(ProjectDir)..\..\lib\minhook.lib;$(ProjectDir)..\..\lib\openxr_loader.lib;$(ProjectDir)..\..\lib\DirectXTK.lib;$(ProjectDir)..\..\lib\ViGEmClient.lib;D3D11.lib;dxguid.lib;D3DCompiler.lib;setupapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>copy "$(SOLUTIONDIR)x64\Release\BF2VR.dll" "$(SOLUTIONDIR)bin"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="DirectXService.cpp" />
@@ -170,13 +173,14 @@
     <ClInclude Include="Matrices.h" />
     <ClInclude Include="OpenXRService.h" />
     <ClInclude Include="PixelShader.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="SDK.h" />
     <ClInclude Include="SDKOLD.h" />
     <ClInclude Include="HookHelper.h" />
     <ClInclude Include="Types.h" />
     <ClInclude Include="Utils.h" />
-    <ClInclude Include="Variations.h" />
     <ClInclude Include="Vectors.h" />
+    <ClInclude Include="VertexShader.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="PixelShader.hlsl">
@@ -190,21 +194,12 @@
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </ObjectFileOutput>
     </FxCompile>
-    <FxCompile Include="VertexShaderLeft.hlsl">
-      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">VSL.h</HeaderFileOutput>
-      <VariableName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">gVSL</VariableName>
+    <FxCompile Include="VertexShader.hlsl">
+      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">VertexShader.h</HeaderFileOutput>
+      <VariableName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">gVS</VariableName>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">VS</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">4.0</ShaderModel>
-      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </ObjectFileOutput>
-    </FxCompile>
-    <FxCompile Include="VertexShaderRight.hlsl">
-      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">VS</EntryPointName>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
-      <VariableName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">gVSR</VariableName>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">4.0</ShaderModel>
-      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">VSR.h</HeaderFileOutput>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </ObjectFileOutput>
     </FxCompile>

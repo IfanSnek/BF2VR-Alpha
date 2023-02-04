@@ -36,7 +36,7 @@ ret
 // Approximately 10 instruction slots used
 #endif
 
-const BYTE gVSL[] =
+const BYTE gVS[] =
 {
      68,  88,  66,  67,   3,  34, 
     134,  52, 179, 241,   3, 211, 

@@ -1,6 +1,7 @@
 #pragma once
 #include <windows.h>
 #include <stdint.h>
+#include <vector>
 #include "Matrices.h"
 #include "Utils.h"
 
@@ -126,6 +127,78 @@ public:
 	class ClientSoldierEntity* controlledControllable; //0x0210
 	char pad_0218[1704]; //0x0218
 }; //Size: 0x08C0
+
+class UpdatePoseResultData
+{
+public:
+	class QuatTransform
+	{
+	public:
+		Vec4 m_TransAndScale; //0x0000 
+		Vec4 m_Rotation; //0x0010 
+	};//Size=0x0020
+
+	QuatTransform* m_LocalTransforms; //0x0000 
+	QuatTransform* m_WorldTransforms; //0x0008 
+	QuatTransform* m_Unk; //0x0010 
+	QuatTransform* m_Unk1; //0x0018 
+	QuatTransform* m_Unk2; //0x0020 
+	QuatTransform* m_ActiveWorldTransforms; //0x0028 
+	QuatTransform* m_ActiveLocalTransforms; //0x0030 
+	__int32 m_Slot; //0x0038 
+	__int32 m_ReaderIndex; //0x003C 
+	unsigned char m_ValidTransforms; //0x0040 
+	unsigned char m_PoseUpdateNeeded; //0x0041 
+	unsigned char m_PoseNeeded; //0x0042 
+};
+
+enum HumanBones
+{
+	Head = 48,
+	Neck = 46,
+	Spine = 5,
+	Spine1 = 6,
+	Spine2 = 7,
+	LeftShoulder = 8,
+	LeftElbowRoll = 13,
+	RightShoulder = 144,
+	RightElbowRoll = 149,
+	LeftHand = 17,
+	RightHand = 153,
+	RightKneeRoll = 235,
+	LeftKneeRoll = 223,
+	RightFoot = 228,
+	LeftFoot = 216
+};
+
+class SkeletonAsset
+{
+public:
+	char pad_0000[24]; //0x0000
+	char* CharacterType; //0x0018
+	char** BoneNames; //0x0020
+};
+
+class AnimationSkeleton
+{
+public:
+	char pad_0000[8]; //0x0000
+	SkeletonAsset* skeletonAsset; //0x0008
+	__int32 m_BoneCount; //0x0010
+};
+
+class ClientBoneCollisionComponent
+{
+public:
+	UpdatePoseResultData m_ragdollTransforms; //0x0000
+	char pad_0008[64]; //0x0008
+	AnimationSkeleton* animationSkeleton; //0x0048
+};
+
+class WSClientSoldierEntity
+{
+public:
+};
 
 class ClientSoldierEntity
 {

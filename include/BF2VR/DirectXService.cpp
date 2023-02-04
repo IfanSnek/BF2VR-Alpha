@@ -1,8 +1,6 @@
-#include "Variations.h"
 #include "DirectXService.h"
 #include "PixelShader.h"
-#include "VSR.h"
-#include "VSL.h"
+#include "VertexShader.h"
 #include "OpenXRService.h"
 #include "Utils.h"
 
@@ -30,10 +28,10 @@ namespace BF2VR {
 
                 log("Attempting to finalize OpenXR session ...");
                 if (!OpenXRService::BeginXRSession(pDevice)) {
-                    log("Unable to begin session");
+                    error("Unable to begin session.");
                     Shutdown();
                 } else {
-                    log("Success");
+                    success("Finalized OpenXR.");
                 }
             }
 
@@ -46,7 +44,7 @@ namespace BF2VR {
                     Matrix4 hmd_transformationmatrix{};
 
                     if (!OpenXRService::BeginFrameAndGetVectors(hmd_location, hmd_quatrotation, hmd_transformationmatrix)) {
-                        log("Did not begin a frame");
+                        warn("Did not begin a frame");
                     }
 
                     OpenXRService::UpdateActions();
@@ -102,7 +100,7 @@ namespace BF2VR {
         // Create the dummy
         if (FAILED(D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, 0, 0, &featureLevel, 1, D3D11_SDK_VERSION, &desc, &pDummySwapChain, &pDummyDevice, nullptr, &pDummyContext)))
         {
-            log("Could not create dummy DirectX device");
+            error("Could not create dummy DirectX device.");
             Shutdown();
             return false;
         }
@@ -114,13 +112,13 @@ namespace BF2VR {
         PresentTarget = reinterpret_cast<Present*>(pTable[8]);
         MH_STATUS mh = MH_CreateHook(reinterpret_cast<LPVOID>(reinterpret_cast<DWORD64>(PresentTarget)), reinterpret_cast<LPVOID>(&PresentDetour), reinterpret_cast<LPVOID*>(&PresentOriginal));
         if (mh != MH_OK) {
-            log("Error hooking DirectX present: " + std::to_string(mh));
+            error("Error hooking DirectX present. Error: " + std::to_string(mh));
             return false;
         }
 
         mh = MH_EnableHook(reinterpret_cast<LPVOID>(reinterpret_cast<DWORD64>(PresentTarget)));
         if (mh != MH_OK) {
-            log("Error enabling DirectX present hook: " + std::to_string(mh));
+            error("Error enabling DirectX present hook. Error: " + std::to_string(mh));
             return false;
         }
 
@@ -142,8 +140,7 @@ namespace BF2VR {
         }
         if (shadersCreated)
         {
-            VertexShaderRight->Release();
-            VertexShaderLeft->Release();
+            VertexShader->Release();
             PixelShader->Release();
         }
         if (copy != nullptr)
@@ -191,11 +188,7 @@ namespace BF2VR {
         m_batch->Begin();
 
         float lineLength = 0.1f;
-        float shift = 0;
-#ifdef  OCULUSFIX
-        shift = (OpenXRService::LeftEye ? .15f : -.15f);
-#endif
-        shift += crosshairX;
+        float shift = crosshairX;
 
         DirectX::VertexPositionColor v1(DirectX::SimpleMath::Vector3(shift - lineLength, crosshairY + 0.003f, 0), DirectX::Colors::Green);
         DirectX::VertexPositionColor v2(DirectX::SimpleMath::Vector3(shift + lineLength, crosshairY + 0.003f, 0), DirectX::Colors::Green);
@@ -233,35 +226,23 @@ namespace BF2VR {
             );
 
             if (FAILED(hr)) {
-                log("Could not create pixel shader " + std::to_string(hr));
+                error("Could not create pixel shader. Error: " + std::to_string(hr));
                 return false;
             }
 
             hr = device->CreateVertexShader(
-                gVSL,
-                ARRAYSIZE(gVSL),
+                gVS,
+                ARRAYSIZE(gVS),
                 nullptr,
-                &VertexShaderLeft
+                &VertexShader
             );
 
             if (FAILED(hr)) {
-                log("Could not create vertex shader for left eye " + std::to_string(hr));
+                error("Could not create vertex shader. Error: " + std::to_string(hr));
                 return false;
             }
 
-            hr = device->CreateVertexShader(
-                gVSR,
-                ARRAYSIZE(gVSR),
-                nullptr,
-                &VertexShaderRight
-            );
-
-            if (FAILED(hr)) {
-                log("Could not create vertex shader for right eye " + std::to_string(hr));
-                return false;
-            }
-
-            log("Shaders Created");
+            info("Shaders Created.");
             shadersCreated = true;
 
         }
@@ -271,6 +252,7 @@ namespace BF2VR {
         srvCreated = true;
         if (srv == nullptr) {
             srvCreated = false;
+            info("Invalidated SRV, regenerating.");
         }
         else {
             D3D11_TEXTURE2D_DESC sourceDesc;
@@ -281,6 +263,7 @@ namespace BF2VR {
                 || copyDesc.Width != sourceDesc.Width
                 || copyDesc.Height != sourceDesc.Height) {
                 srvCreated = false;
+                info("Invalidated SRV, regenerating.");
                 srv->Release();
                 copy->Release();
             }
@@ -295,7 +278,7 @@ namespace BF2VR {
             HRESULT hr = device->CreateTexture2D(&textureDesc, nullptr, &copy);
             if (FAILED(hr))
             {
-                log("Failed to copy texture");
+                warn("Failed to copy texture");
                 return false;
             }
 
@@ -307,10 +290,10 @@ namespace BF2VR {
             hr = device->CreateShaderResourceView(copy, &srvDesc, &srv);
             if (FAILED(hr))
             {
-                log("Failed to create shader resource view");
+                warn("Failed to create shader resource view");
                 return false;
             }
-            log("SRV Created");
+            info("SRV Created.");
             srvCreated = true;
         }
 
@@ -321,7 +304,7 @@ namespace BF2VR {
         context->IASetIndexBuffer(nullptr, static_cast<DXGI_FORMAT>(0), 0);
         context->IASetInputLayout(nullptr);
         context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        context->VSSetShader((OpenXRService::LeftEye ? VertexShaderLeft : VertexShaderRight), nullptr, 0);
+        context->VSSetShader(VertexShader, nullptr, 0);
         context->PSSetShader(PixelShader, nullptr, 0);
         context->OMSetRenderTargets(1, &rtv, nullptr);
         context->PSSetShaderResources(0, 1, &srv);
@@ -331,5 +314,7 @@ namespace BF2VR {
 
         context->Release();
         device->Release();
+
+        return true;
     }
 }
