@@ -4,17 +4,17 @@
 #include <Xinput.h>
 
 namespace BF2VR {
-	bool InputService::Connect() {
+	bool InputService::connect() {
 
-		client = vigem_alloc();
+		pVigemClient = vigem_alloc();
 
-		if (client == nullptr)
+		if (pVigemClient == nullptr)
 		{
 			error("Could not allocate memory for ViGEm.");
 			return false;
 		}
 
-		const auto retval = vigem_connect(client);
+		const auto retval = vigem_connect(pVigemClient);
 		if (!VIGEM_SUCCESS(retval))
 		{
 			error("Could not conntect to ViGEm. Error: " + std::to_string(retval));
@@ -23,8 +23,8 @@ namespace BF2VR {
 
 		// Create a controller
 
-		pad = vigem_target_x360_alloc();
-		const auto pir = vigem_target_add(client, pad);
+		pVigemGamepad = vigem_target_x360_alloc();
+		const auto pir = vigem_target_add(pVigemClient, pVigemGamepad);
 
 		if (!VIGEM_SUCCESS(pir))
 		{
@@ -35,24 +35,24 @@ namespace BF2VR {
 		return true;
 	}
 
-	void InputService::Update() {
+	void InputService::update() {
 
 		XINPUT_GAMEPAD gamepad{};
-		gamepad.sThumbLX = lX;
-		gamepad.sThumbLY = lY;
-		gamepad.bRightTrigger = bR;
-		gamepad.bLeftTrigger = bL;
+		gamepad.sThumbLX = thumbLX;
+		gamepad.sThumbLY = thumbLY;
+		gamepad.bRightTrigger = rightTrigger;
+		gamepad.bLeftTrigger = leftTrigger;
 		gamepad.wButtons = buttons;
 
-		VIGEM_ERROR err = vigem_target_x360_update(client, pad, *reinterpret_cast<XUSB_REPORT*>(&gamepad));
+		VIGEM_ERROR err = vigem_target_x360_update(pVigemClient, pVigemGamepad, *reinterpret_cast<XUSB_REPORT*>(&gamepad));
 		if (!VIGEM_SUCCESS(err))
 		{
 			warn("Could not update the virtual gamepad. Error: " + std::to_string(err));
 		}
 	}
 
-	void InputService::Disconnect() {
-		vigem_disconnect(client);
-		vigem_free(client);
+	void InputService::disconnect() {
+		vigem_disconnect(pVigemClient);
+		vigem_free(pVigemClient);
 	}
 }

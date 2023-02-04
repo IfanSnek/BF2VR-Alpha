@@ -5,11 +5,11 @@
 #include "Matrices.h"
 #include "Utils.h"
 
-static const DWORD64 OffsetGameContext  = 0x143DD7948;
-static const DWORD64 OffsetLocalAimer   = 0x14406E610;
-static const DWORD64 OffsetGameRenderer = 0x143ffbe10;
-static const DWORD64 OffsetUISettings   = 0x143aebb80;
-static const DWORD64 OffsetCamera       = 0x1410c7010;
+static const DWORD64 OFFSETGAMECONTEXT  = 0x143DD7948;
+static const DWORD64 OFFSETLOCALAIMER   = 0x14406E610;
+static const DWORD64 OFFSETGAMERENDERER = 0x143ffbe10;
+static const DWORD64 OFFSETUISETTINGS   = 0x143aebb80;
+static const DWORD64 OFFSETCAMERA       = 0x1410c7010;
 
 class RenderView {
 public:
@@ -33,7 +33,7 @@ public:
 
 	// static method to return the default instance
 	static GameRenderer* GetInstance(void) {
-		return *(GameRenderer**)OffsetGameRenderer;
+		return *(GameRenderer**)OFFSETGAMERENDERER;
 	}
 };
 
@@ -52,7 +52,7 @@ public:
 	bool drawEnable;
 	// static method to return the default instance, from an offset of GameTimeSettings's pointer
 	static UISettings* GetInstance(void) {
-		return *(UISettings**)OffsetUISettings;
+		return *(UISettings**)OFFSETUISETTINGS;
 	}
 };
 
@@ -83,7 +83,7 @@ public:
 	class Alternator* alternator; //0x0098
 	char pad_00A0[224]; //0x00A0
 	static LocalAimer* GetInstance() {
-		return *(LocalAimer**)(OffsetLocalAimer);
+		return *(LocalAimer**)(OFFSETLOCALAIMER);
 	}
 }; //Size: 0x0180
 
@@ -96,7 +96,7 @@ public:
 	class PlayerManager* playerManager; //0x0058
 	char pad_0060[8216]; //0x0060
 	static GameContext* GetInstance() {
-		return *(GameContext**)(OffsetGameContext);
+		return *(GameContext**)(OFFSETGAMECONTEXT);
 	}
 }; //Size: 0x2078
 

@@ -7,21 +7,21 @@ namespace BF2VR {
 
 	class GameService {
 	public:
-		static inline Matrix4x4 Transform;
-		static inline void* RenderView = NULL;
-		static inline Vec4 CameraPosition = { 0, 0, 0, 0 };
-		static inline char* Level = nullptr;
+		static inline Matrix4x4 cameraTransfrom;
+		static inline void* pRenderView = NULL;
+		static inline Vec4 cameraPosition = { 0, 0, 0, 0 };
+		static inline char* level = nullptr;
 
-		static bool HookCamera();
+		static bool hookCamera();
 
-		static void UpdateCamera(Vec3 location, Matrix4 matrix, float yaw, float pitch, Vec3 gunPos, Vec4 gunRot);
+		static void updateCamera(Vec3 cameraLocation, Matrix4 cameraViewMatrix, float aimYaw, float aimPitch, Vec3 gunPos, Vec4 gunRot);
 
-		static void SetMenu(bool enabled);
+		static void setUIDrawState(bool enabled);
 
 	private:
 
-		typedef __int64(Update)(class CameraObject*, class CameraObject*);
-		static Update UpdateDetour;
-		static inline Update* UpdateOriginal = nullptr;
+		typedef __int64(CameraUpdate)(class CameraObject*, class CameraObject*);
+		static CameraUpdate cameraUpdateDetour;
+		static inline CameraUpdate* updateOriginal = nullptr;
 	};
 }

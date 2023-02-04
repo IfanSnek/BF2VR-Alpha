@@ -173,7 +173,6 @@
     <ClInclude Include="Matrices.h" />
     <ClInclude Include="OpenXRService.h" />
     <ClInclude Include="PixelShader.h" />
-    <ClInclude Include="resource.h" />
     <ClInclude Include="SDK.h" />
     <ClInclude Include="SDKOLD.h" />
     <ClInclude Include="HookHelper.h" />

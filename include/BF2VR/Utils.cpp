@@ -17,7 +17,7 @@ namespace BF2VR
         std::cout << "[BF2VR]   ";
 
         std::cout << message << std::endl;
-        Log << message << std::endl;
+        logFile << message << std::endl;
     }
     void error(std::string message) {
         HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -29,7 +29,7 @@ namespace BF2VR
         SetConsoleTextAttribute(hConsole,
             FOREGROUND_RED);
         std::cout << message << std::endl;
-        Log << message << std::endl;
+        logFile << message << std::endl;
     }
     void warn(std::string message) {
 
@@ -65,7 +65,7 @@ namespace BF2VR
         SetConsoleTextAttribute(hConsole,
             FOREGROUND_RED | FOREGROUND_GREEN);
         std::cout << message << std::endl;
-        Log << message << std::endl;
+        logFile << message << std::endl;
 
         lastWarn = message;
     }
@@ -78,7 +78,7 @@ namespace BF2VR
         SetConsoleTextAttribute(hConsole,
             FOREGROUND_GREEN);
         std::cout << message << std::endl;
-        Log << message << std::endl;
+        logFile << message << std::endl;
     }
     void info(std::string message) {
         HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -89,7 +89,7 @@ namespace BF2VR
         SetConsoleTextAttribute(hConsole,
             FOREGROUND_BLUE | FOREGROUND_INTENSITY);
         std::cout << message << std::endl;
-        Log << message << std::endl;
+        logFile << message << std::endl;
     }
     void deb(std::string message) {
         HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -100,37 +100,37 @@ namespace BF2VR
         SetConsoleTextAttribute(hConsole,
             FOREGROUND_RED | FOREGROUND_BLUE);
         std::cout << message << std::endl;
-        Log << message << std::endl;
+        logFile << message << std::endl;
     }
 
     // Check if a pointer is legit
-    bool IsValidPtr(PVOID p) { return (p >= (PVOID)0x10000) && (p < ((PVOID)0x000F000000000000)) && p != nullptr &&!IsBadReadPtr(p, sizeof(PVOID)); }
+    bool isValidPtr(PVOID p) { return (p >= (PVOID)0x10000) && (p < ((PVOID)0x000F000000000000)) && p != nullptr &&!IsBadReadPtr(p, sizeof(PVOID)); }
 
     // Shutdown and eject the mod. Currently only works before DirextX gets hooked.
-    void Shutdown() {
-        OpenXRService::VRReady = false;
-        DirectXService::DoPresent = false;
+    void shutdown() {
+        OpenXRService::isVRReady = false;
+        DirectXService::shouldPresent = false;
 
         Sleep(100); // Let a few frames render for anyncronous present
 
         log("Unhooking Camera");
-        HookHelper::DestroyHook(OffsetCamera);
+        HookHelper::destroyHook(OFFSETCAMERA);
 
         log("Ending VR");
-        OpenXRService::EndXR();
+        OpenXRService::endXR();
         Sleep(100);
 
         log("Unhooking DirectX");
-        DirectXService::UnhookDirectX();
+        DirectXService::unhookDirectX();
 
         log("Disconnecting ViGEm");
-        InputService::Disconnect();
+        InputService::disconnect();
 
-        ShutdownNoHooks();
+        shutdownNoHooks();
     }
 
     // Shutdown without removing hooks. This is for early initialization when nothing has been hooked yet.
-    void ShutdownNoHooks() {
+    void shutdownNoHooks() {
         log("Uninitializing Minhook");
         MH_Uninitialize();
 
@@ -139,14 +139,14 @@ namespace BF2VR
         HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
         SetConsoleTextAttribute(hConsole, FOREGROUND_INTENSITY);
         std::cout << "You may now close this window." << std::endl;
-        Log << "End of log." << std::endl;
+        logFile << "End of log." << std::endl;
 
         FreeConsole();
-        FreeLibraryAndExitThread(OwnModule, 0);
+        FreeLibraryAndExitThread(ownModule, 0);
     }
 
 
-    void LoadConfig() {
+    void loadConfig() {
 
         // Open config.txt and read it line by line, applying the values
 
@@ -159,7 +159,7 @@ namespace BF2VR
             info("No valid configuration has been found. The game will autoconfigure, but then you will need to restart the game. Please read the below logs:");
             info("##############################");
 
-            Reconfig = true;;
+            doReconfig = true;;
             return;
         }
 
@@ -205,7 +205,7 @@ namespace BF2VR
         Sleep(100);
     }
 
-    void SaveConfig() {
+    void saveConfig() {
 
         static std::ofstream Config("config.txt", std::ios_base::app);
 
@@ -216,7 +216,7 @@ namespace BF2VR
     }
 
     // Converts quats to euler for the Aiming function
-    Vec3 EulerFromQuat(Vec4 q)
+    Vec3 eulerFromQuat(Vec4 q)
     {
         Vec3 v;
 
@@ -224,14 +224,14 @@ namespace BF2VR
         if (test > 0.499)
         { // singularity at north pole
             v.x = 2 * atan2(q.x, q.w); // heading
-            v.y = pi / 2; // attitude
+            v.y = PI / 2; // attitude
             v.z = 0; // bank
             return v;
         }
         if (test < -0.499)
         { // singularity at south pole
             v.x = -2 * atan2(q.x, q.w); // headingq
-            v.y = -pi / 2; // attitude
+            v.y = -PI / 2; // attitude
             v.z = 0; // bank
             return v;
         }

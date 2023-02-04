@@ -5,14 +5,15 @@ class HookHelper
 {
 public:
 	// create a standard hook
-	static void CreateHook(DWORD64 address, void* pHook, void* original) {
+	static void createHook(DWORD64 address, void* pHook, void* pOriginal) {
+
 		// if this is the first hook, initialize minhook
-		static bool firstTime = true;
-		if (firstTime) {
+		static bool firstTimeHooking = true;
+		if (firstTimeHooking) {
 			MH_Initialize();
 		}
-		// then create the hook, and enable it
-		MH_CreateHook((LPVOID)address, pHook, (LPVOID*)original);
+
+		MH_CreateHook((LPVOID)address, pHook, (LPVOID*)pOriginal);
 		MH_EnableHook((LPVOID)address);
 
 	}
@@ -21,7 +22,7 @@ public:
 	{
 		return MH_CreateHookApi(pszModule, pszProcName, pDetour, reinterpret_cast<LPVOID*>(ppOriginal));
 	}
-	static void DestroyHook(DWORD64 address) {
+	static void destroyHook(DWORD64 address) {
 		MH_DisableHook((LPVOID)address);
 		MH_RemoveHook((LPVOID)address);
 	}

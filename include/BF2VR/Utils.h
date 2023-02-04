@@ -7,11 +7,11 @@
 
 namespace BF2VR {
 
-	inline HMODULE OwnModule;
-	inline HWND OwnWindow;
+	inline HMODULE ownModule;
+	inline HWND ownWindow;
 	
 
-	static std::ofstream Log("logs.txt", std::ios_base::app);
+	static std::ofstream logFile("logs.txt", std::ios_base::app);
 
 	void log(std::string message);
 	void error(std::string message);
@@ -24,17 +24,17 @@ namespace BF2VR {
 	void info(std::string message);
 	void deb(std::string message);
 	
-	bool IsValidPtr(PVOID p);
+	bool isValidPtr(PVOID p);
 
-	void Shutdown();
+	void shutdown();
 
-	void ShutdownNoHooks();
+	void shutdownNoHooks();
 
-	void LoadConfig();
+	void loadConfig();
 
-	void SaveConfig();
+	void saveConfig();
 
-	Vec3 EulerFromQuat(Vec4 q);
+	Vec3 eulerFromQuat(Vec4 q);
 
     // https://github.com/onra2/swbf2-internal/blob/master/swbf2%20onra2/Classes.h
 
@@ -68,11 +68,11 @@ namespace BF2VR {
 		DWORD lastOffset = 0;
 		while (offset < classSize) {
 			offset += 8;
-			if (!IsValidPtr((void*)((DWORD64)addr + offset))) continue;
+			if (!isValidPtr((void*)((DWORD64)addr + offset))) continue;
 			void* czech = *(void**)((DWORD64)addr + offset);
-			if (!IsValidPtr(czech)) continue;
-			if (!IsValidPtr(*(void**)czech)) continue; // vtable
-			if (!IsValidPtr(**(void***)czech)) continue; // virtual 1;
+			if (!isValidPtr(czech)) continue;
+			if (!isValidPtr(*(void**)czech)) continue; // vtable
+			if (!isValidPtr(**(void***)czech)) continue; // virtual 1;
 			void* pGetType = **(DWORD64***)czech;
 			if ((DWORD64)pGetType < BASE_ADDRESS || (DWORD64)pGetType > MAX_ADDRESS) continue;
 
@@ -87,11 +87,11 @@ namespace BF2VR {
 					pTypeInfo = (void*)(*(int32_t*)((DWORD64)pGetType + 3) + (DWORD64)pGetType + 7);
 				}
 				else continue;
-				if (!IsValidPtr(pTypeInfo)) continue;
+				if (!isValidPtr(pTypeInfo)) continue;
 				void* pMemberInfo = *(void**)pTypeInfo;
-				if (!IsValidPtr(pMemberInfo)) continue;
+				if (!isValidPtr(pMemberInfo)) continue;
 				char* m_name = *(char**)pMemberInfo;
-				if (!IsValidPtr(m_name)) continue;
+				if (!isValidPtr(m_name)) continue;
 				if ((DWORD64)pTypeInfo > BASE_ADDRESS && (DWORD64)pTypeInfo < MAX_ADDRESS) {
 					if (strcmp(m_name, name) == 0) {
 						typeInfoMemberResult result;
@@ -114,9 +114,9 @@ namespace BF2VR {
 
 	inline float RATIO = 1;
 	inline float FOV = 90.0f;
-	inline bool Reconfig = false;
+	inline bool doReconfig = false;
 	inline bool NOFOV = false;
 	inline bool HEADAIM = false;
 
-	const inline float pi = 3.14159265358979323846f;
+	const inline float PI = 3.14159265358979323846f;
 }

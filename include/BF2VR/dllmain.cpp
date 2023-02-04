@@ -10,21 +10,21 @@ using namespace BF2VR;
 
 DWORD __stdcall mainThread(HMODULE module)
 {
-    OwnModule = module;
+    ownModule = module;
 
     AllocConsole();
     freopen("CONOUT$", "w", stdout);
 
     time_t my_time = time(NULL);
     std::cout << "New startup at " << ctime(&my_time) << std::endl;
-    Log << std::endl << std::endl << "New startup at " << ctime(&my_time) << std::endl;
+    logFile << std::endl << std::endl << "New startup at " << ctime(&my_time) << std::endl;
 
     log("Attempting to find Battlefront window ...");
-    OwnWindow = FindWindowA("Frostbite", "STAR WARS Battlefront II");
-    if (!OwnWindow)
+    ownWindow = FindWindowA("Frostbite", "STAR WARS Battlefront II");
+    if (!ownWindow)
     {
         error("Couldn't find window.");
-        ShutdownNoHooks();
+        shutdownNoHooks();
         return 1;
     }
     else {
@@ -33,22 +33,22 @@ DWORD __stdcall mainThread(HMODULE module)
 
     // Eye resolution stuff
 
-    LoadConfig();
+    loadConfig();
 
     RECT desktop;
-    GetWindowRect(OwnWindow, &desktop);
-    MoveWindow(OwnWindow, 0, 0, desktop.bottom * RATIO, desktop.bottom, TRUE);
+    GetWindowRect(ownWindow, &desktop);
+    MoveWindow(ownWindow, 0, 0, desktop.bottom * RATIO, desktop.bottom, TRUE);
 
-    OpenXRService::EyeWidth = desktop.bottom * RATIO;
-    OpenXRService::EyeHeight = desktop.bottom;
+    OpenXRService::eyeWidth = desktop.bottom * RATIO;
+    OpenXRService::eyeHeight = desktop.bottom;
 
 
     MH_Initialize();
 
     log("Attempting to start OpenXR ...");
-    if (!OpenXRService::CreateXRInstanceWithExtensions()) {
+    if (!OpenXRService::createXRInstanceWithExtensions()) {
         error("Unable to start vr");
-        ShutdownNoHooks();
+        shutdownNoHooks();
         return 1;
     }
     else {
@@ -58,28 +58,28 @@ DWORD __stdcall mainThread(HMODULE module)
     Sleep(100);
 
     log("Attempting to hook DirectX ...");
-    if (!DirectXService::HookDirectX(OwnWindow)) {
+    if (!DirectXService::hookDirectX(ownWindow)) {
         error("Unable to Hook DirectX.");
-        ShutdownNoHooks();
+        shutdownNoHooks();
     }
     else {
         success("Hooked DirectX.");
     }
 
     log("Attempting to start ViGEm ...");
-    if (!InputService::Connect()) {
+    if (!InputService::connect()) {
         error("Unable to start ViGEm.");
-        DirectXService::UnhookDirectX();
-        ShutdownNoHooks();
+        DirectXService::unhookDirectX();
+        shutdownNoHooks();
     }
     else {
         success("Started ViGEm.");
     }
 
     log("Attempting to hook the BF2 Camera ...");
-    if (!GameService::HookCamera()) {
+    if (!GameService::hookCamera()) {
         error("Unable to Hook the BF2 Camera.");
-        Shutdown();
+        shutdown();
     }
     else {
         success("Hooked the BF2 Camera.");
@@ -91,7 +91,7 @@ DWORD __stdcall mainThread(HMODULE module)
     for (;;) {
 
         if (GetAsyncKeyState(VK_END)) {
-            Shutdown();
+            shutdown();
             return 1;
         }
     }

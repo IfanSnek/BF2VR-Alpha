@@ -5,16 +5,16 @@
 
 namespace BF2VR {
 
-    bool GameService::HookCamera() {
+    bool GameService::hookCamera() {
 
-        RenderView = GameRenderer::GetInstance()->renderView;
-        if (!IsValidPtr(RenderView))
+        pRenderView = GameRenderer::GetInstance()->renderView;
+        if (!isValidPtr(pRenderView))
         {
             error("Unable to hook camera, Renderview is invalid.");
             return false;
         }
 
-        MH_STATUS mh = MH_CreateHook(reinterpret_cast<LPVOID>(OffsetCamera), reinterpret_cast<LPVOID>(&UpdateDetour), reinterpret_cast<LPVOID*>(&UpdateOriginal));
+        MH_STATUS mh = MH_CreateHook(reinterpret_cast<LPVOID>(OFFSETCAMERA), reinterpret_cast<LPVOID>(&cameraUpdateDetour), reinterpret_cast<LPVOID*>(&updateOriginal));
         if (mh != MH_OK && mh != 9) {
             error("Error hooking BF2 UpdateCamera. Error: " + std::to_string(mh));
             return false;
@@ -24,7 +24,7 @@ namespace BF2VR {
             return false;
         }
 
-        mh = MH_EnableHook(reinterpret_cast<LPVOID>(OffsetCamera));
+        mh = MH_EnableHook(reinterpret_cast<LPVOID>(OFFSETCAMERA));
         if (mh != MH_OK) {
             error("Error enabling BF2 UpdateCamera hook. Error: " + std::to_string(mh));
             return false;
@@ -33,24 +33,24 @@ namespace BF2VR {
         return true;
     }
 
-    __int64 GameService::UpdateDetour(CameraObject* a1, CameraObject* a2)
+    __int64 GameService::cameraUpdateDetour(CameraObject* a1, CameraObject* a2)
     {
-        if (a2 == RenderView && OpenXRService::VRReady) {
-            OpenXRService::UpdatePoses();
-            a2->cameraTransform = Transform;
+        if (a2 == pRenderView && OpenXRService::isVRReady) {
+            OpenXRService::updatePoses();
+            a2->cameraTransform = cameraTransfrom;
         }
-        return UpdateOriginal(a1, a2);
+        return updateOriginal(a1, a2);
     }
 
     // Function to set the view of the game camera
-    void GameService::UpdateCamera(Vec3 location, Matrix4 HmdRot, float yaw, float pitch, Vec3 gunPos, Vec4 gunRot) {
+    void GameService::updateCamera(Vec3 hmdLocation, Matrix4 hmdRot, float yaw, float pitch, Vec3 gunPos, Vec4 gunRot) {
         GameRenderer* pGameRenderer = GameRenderer::GetInstance();
-        if (!IsValidPtr(pGameRenderer))
+        if (!isValidPtr(pGameRenderer))
         {
             return;
         }
         GameRenderSettings* pSettings = pGameRenderer->gameRenderSettings;
-        if (!IsValidPtr(pSettings))
+        if (!isValidPtr(pSettings))
         {
             return;
         }
@@ -60,83 +60,83 @@ namespace BF2VR {
             pSettings->forceFov = FOV;
         }
 
-        HmdRot.invert();
+        hmdRot.invert();
 
         // Convert back to Matrix4x4
-        Matrix4x4 out;
-        out.x.x = HmdRot[0]; out.x.y = HmdRot[1]; out.x.z = HmdRot[2]; out.x.w = HmdRot[3];
-        out.y.x = HmdRot[4]; out.y.y = HmdRot[5]; out.y.z = HmdRot[6]; out.y.w = HmdRot[7];
-        out.z.x = HmdRot[8]; out.z.y = HmdRot[9]; out.z.z = HmdRot[10]; out.z.w = HmdRot[11];
+        Matrix4x4 outputHeadMatrix;
+        outputHeadMatrix.x.x = hmdRot[0]; outputHeadMatrix.x.y = hmdRot[1]; outputHeadMatrix.x.z = hmdRot[2]; outputHeadMatrix.x.w = hmdRot[3];
+        outputHeadMatrix.y.x = hmdRot[4]; outputHeadMatrix.y.y = hmdRot[5]; outputHeadMatrix.y.z = hmdRot[6]; outputHeadMatrix.y.w = hmdRot[7];
+        outputHeadMatrix.z.x = hmdRot[8]; outputHeadMatrix.z.y = hmdRot[9]; outputHeadMatrix.z.z = hmdRot[10]; outputHeadMatrix.z.w = hmdRot[11];
 
         // Set location from HMD
-        out.o.x = location.x;
-        out.o.y = location.y;
-        out.o.z = location.z;
-        out.o.w = 1;
+        outputHeadMatrix.o.x = hmdLocation.x;
+        outputHeadMatrix.o.y = hmdLocation.y;
+        outputHeadMatrix.o.z = hmdLocation.z;
+        outputHeadMatrix.o.w = 1;
 
         // Get some game members, validating pointers along the way
         GameContext* CurrentContext = GameContext::GetInstance();
-        if (!IsValidPtr(CurrentContext)) {
+        if (!isValidPtr(CurrentContext)) {
             return;
         }
 
         ClientLevel* CurrentLevel = CurrentContext->level;
-        if (!IsValidPtr(CurrentLevel)) {
+        if (!isValidPtr(CurrentLevel)) {
             return;
         }
 
         char* levelname = CurrentLevel->LevelName;
-        if (!IsValidPtr(levelname)) {
+        if (!isValidPtr(levelname)) {
             return;
         }
 
-        if (levelname != Level)
+        if (levelname != level)
         {
             // Check for when the level name changes
             std::string lvl = levelname;
             info("Switched to " + lvl);
-            Level = levelname;
+            level = levelname;
         }
 
         if (strcmp(levelname, "Levels/FrontEnd/FrontEnd") == 0)
         {
-            out.o.y -= 3.5;
+            outputHeadMatrix.o.y -= 3.5;
 
             // Update the transform that the CameraHook will use
-            Transform = out;
+            cameraTransfrom = outputHeadMatrix;
         }
         else
         {
             // Get more members, again, checking along the way
             PlayerManager* playerManager = CurrentContext->playerManager;
-            if (!IsValidPtr(playerManager)) {
+            if (!isValidPtr(playerManager)) {
                 return;
             }
 
             ClientPlayer* player = playerManager->LocalPlayer;
-            if (!IsValidPtr(player)) {
+            if (!isValidPtr(player)) {
                 return;
             }
 
             ClientSoldierEntity* soldier = player->controlledControllable;
-            if (!IsValidPtr(soldier)) {
+            if (!isValidPtr(soldier)) {
                 return;
             }
 
             ClientSoldierPrediction* prediction = soldier->clientSoldierPrediction;
-            if (!IsValidPtr(prediction)) {
+            if (!isValidPtr(prediction)) {
                 return;
             }
 
             Vec3 playerPosition = prediction->Location;
             float heightOffset = soldier->HeightOffset;
 
-            out.o.x += playerPosition.x;
-            out.o.y += playerPosition.y - heightOffset + 3;
-            out.o.z += playerPosition.z;
+            outputHeadMatrix.o.x += playerPosition.x;
+            outputHeadMatrix.o.y += playerPosition.y - heightOffset + 3;
+            outputHeadMatrix.o.z += playerPosition.z;
 
             // Update the transform that the CameraHook will use
-            Transform = out;
+            cameraTransfrom = outputHeadMatrix;
 
             // Update the view angles
             // Check wich ViewAngle pointer is active. The signature of the active viewangle will start with 12 0xff bytes
@@ -144,7 +144,7 @@ namespace BF2VR {
             int matches = 0;
 
             LocalAimer* aimer = LocalAimer::GetInstance();
-            if (!IsValidPtr(aimer))
+            if (!isValidPtr(aimer))
             {
                 warn("Could not find address for LocalAimer. If this shows up a lot, please report this to the dev. Try respawning to see if it temporarially fixes it.");
                 return;
@@ -152,12 +152,12 @@ namespace BF2VR {
             }
 
             Alternator* alternator = aimer->alternator;
-            if (!IsValidPtr(alternator))
+            if (!isValidPtr(alternator))
             {
                 warn("Could not find address for Alternator. If this shows up a lot, please report this to the dev. Try respawning to see if it temporarially fixes it.");
                 return;
 
-            } else if (IsValidPtr(alternator->Primary))
+            } else if (isValidPtr(alternator->Primary))
             {
                 for (int i = 0; i < 12; i++)
                 {
@@ -173,11 +173,11 @@ namespace BF2VR {
                 {
                     // Primary is active
                     alternator->Primary->Pitch = pitch;
-                    alternator->Primary->Yaw = yaw - 3.14;
+                    alternator->Primary->Yaw = yaw - 3.14f;
 
                 }
                 else {
-                    if (IsValidPtr(alternator->Secondary))
+                    if (isValidPtr(alternator->Secondary))
                     {
                         matches = 0;
 
@@ -195,7 +195,7 @@ namespace BF2VR {
                         {
                             // Secondary is active
                             alternator->Secondary->Pitch = pitch;
-                            alternator->Secondary->Yaw = yaw + 3.14;
+                            alternator->Secondary->Yaw = yaw + 3.14f;
                         }
                         else {
                             // Uh oh, none are active.
@@ -208,13 +208,13 @@ namespace BF2VR {
                     }
                 }
             }
+            return;
+
 
             // Update the skeleton 
             //WIP
-
-
-            return;
-
+            /*
+            
             WSClientSoldierEntity* WSsoldier = nullptr;
 
             if (typeInfoMemberResults.size() == 0)
@@ -229,7 +229,7 @@ namespace BF2VR {
             }
 
 
-            if (!IsValidPtr(WSsoldier))
+            if (!isValidPtr(WSsoldier))
             {
                 warn("Could not find address for the player soldier. 6dof guns won't work this frame.");
                 return;
@@ -249,7 +249,7 @@ namespace BF2VR {
             }
 
 
-            if (!IsValidPtr(Bones))
+            if (!isValidPtr(Bones))
             {
                 warn("Could not find address for the player skeleton. 6dof guns won't work this frame.");
                 return;
@@ -259,7 +259,7 @@ namespace BF2VR {
             auto form = PoseResult.m_ActiveWorldTransforms;
 
 
-            if (!IsValidPtr(form))
+            if (!isValidPtr(form))
             {
                 log("Could not find address for the player gun bone. 6dof guns won't work this frame.");
                 return;
@@ -268,7 +268,7 @@ namespace BF2VR {
             deb(std::to_string(form[207].m_Rotation.x));
 
             AnimationSkeleton* pSkeleton = Bones->animationSkeleton;
-            if (!IsValidPtr(pSkeleton))
+            if (!isValidPtr(pSkeleton))
             {
                 warn("Could not find address for the AnimationSkeleton. 6dof guns won't work this frame.");
                 return;
@@ -276,7 +276,7 @@ namespace BF2VR {
 
 
             SkeletonAsset* skeletonAsset = pSkeleton->skeletonAsset;
-            if (!IsValidPtr(skeletonAsset))
+            if (!isValidPtr(skeletonAsset))
             {
                 warn("Could not find address for the AnimationSkeletonAsset. 6dof guns won't work this frame.");
                 return;
@@ -302,7 +302,7 @@ namespace BF2VR {
             if (PoseResult.m_ValidTransforms)
             {
                 UpdatePoseResultData::QuatTransform* pQuat = PoseResult.m_ActiveWorldTransforms;
-                if (!IsValidPtr(pQuat)) {
+                if (!isValidPtr(pQuat)) {
                     warn("Could not find the gun bone transform. 6dof guns won't work this frame.");
                     return;
                 }
@@ -313,15 +313,16 @@ namespace BF2VR {
 
                 pQuat[BoneId].m_Rotation = gunRot;
             }
+            */
         }
 
     }
 
 
 
-    void GameService::SetMenu(bool enabled) {
+    void GameService::setUIDrawState(bool enabled) {
         UISettings* pUISettings = UISettings::GetInstance();
-        if (!IsValidPtr(pUISettings))
+        if (!isValidPtr(pUISettings))
         {
             warn("UI pointer invalid. Cannot toggle.");
             return;
