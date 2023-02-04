@@ -292,7 +292,7 @@ namespace BF2VR {
         }
 
         // Menu click action
-        xrStringToPath(xrInstance, "/user/hand/left/input/x/click", &menuPath);
+        xrStringToPath(xrInstance, "/user/hand/left/input/menu/click", &menuPath);
         {
             XrActionCreateInfo actionInfo = { XR_TYPE_ACTION_CREATE_INFO };
             actionInfo.actionType = XR_ACTION_TYPE_BOOLEAN_INPUT;
@@ -303,6 +303,22 @@ namespace BF2VR {
             xr = xrCreateAction(actionSet, &actionInfo, &menuAction);
             if (xr != XR_SUCCESS) {
                 warn("Failed to create pose action for menu, menu mode will not work. Error: " + std::to_string(xr));
+                return false;
+            }
+        }
+
+        // X click action
+        xrStringToPath(xrInstance, "/user/hand/left/input/x/click", &reloadPath);
+        {
+            XrActionCreateInfo actionInfo = { XR_TYPE_ACTION_CREATE_INFO };
+            actionInfo.actionType = XR_ACTION_TYPE_BOOLEAN_INPUT;
+            actionInfo.countSubactionPaths = 1;
+            actionInfo.subactionPaths = &handPaths[0];
+            strcpy(actionInfo.actionName, "reload");
+            strcpy(actionInfo.localizedActionName, "Reload");
+            xr = xrCreateAction(actionSet, &actionInfo, &reloadAction);
+            if (xr != XR_SUCCESS) {
+                warn("Failed to create pose action for menu, reloading will not work. Error: " + std::to_string(xr));
                 return false;
             }
         }
@@ -408,10 +424,15 @@ namespace BF2VR {
         binding.binding = jumpPath;
         bindings.push_back(binding);
 
+        binding.action = reloadAction;
+        binding.binding = reloadPath;
+        bindings.push_back(binding);
+
+
 
         XrInteractionProfileSuggestedBinding suggested_bindings = { XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
         suggested_bindings.interactionProfile = interaction_profile_path;
-        suggested_bindings.countSuggestedBindings = 10;
+        suggested_bindings.countSuggestedBindings = 11;
         suggested_bindings.suggestedBindings = bindings.data();
 
         xrSuggestInteractionProfileBindings(xrInstance, &suggested_bindings);
@@ -666,6 +687,21 @@ namespace BF2VR {
         }
 
         {
+            // Get reload button state
+
+            reload_value.type = XR_TYPE_ACTION_STATE_BOOLEAN;
+
+            XrActionStateGetInfo get_info = { XR_TYPE_ACTION_STATE_GET_INFO };
+            get_info.action = reloadAction;
+            get_info.subactionPath = handPaths[0];
+            xr = xrGetActionStateBoolean(xrSession, &get_info, &reload_value);
+            if (xr != XR_SUCCESS) {
+                warn("Failed to get value for reload button. Error: " + std::to_string(xr));
+            }
+
+        }
+
+        {
             // Get walking state
 
             menu_value.type = XR_TYPE_ACTION_STATE_VECTOR2F;
@@ -694,6 +730,8 @@ namespace BF2VR {
             InputService::buttons = InputService::buttons | 0x2000;
         if (jump_value.currentState)
             InputService::buttons = InputService::buttons | 0x1000;
+        if (reload_value.currentState)
+            InputService::buttons = InputService::buttons | 0x4000;
         if (grip_value[0].currentState > 0.8)
             InputService::buttons = InputService::buttons | 0x0100;
         if (grip_value[1].currentState > 0.8)

@@ -64,6 +64,7 @@ namespace BF2VR {
 		static inline XrPath walkPath;
 		static inline XrPath rollPath;
 		static inline XrPath jumpPath;
+		static inline XrPath reloadPath;
 
 		static inline XrAction poseAction;
 		static inline XrAction triggerAction;
@@ -72,6 +73,7 @@ namespace BF2VR {
 		static inline XrAction walkAction;
 		static inline XrAction rollAction;
 		static inline XrAction jumpAction;
+		static inline XrAction reloadAction;
 
 		static inline XrSpace pose_action_spaces[2];
 
@@ -83,6 +85,7 @@ namespace BF2VR {
 		static inline XrActionStateVector2f walk_value;
 		static inline XrActionStateBoolean roll_value;
 		static inline XrActionStateBoolean jump_value;
+		static inline XrActionStateBoolean reload_value;
 
 		// BeginFrameAndGetVectors
 		static inline XrFrameState xrFrameState = {};
