@@ -704,7 +704,7 @@ namespace BF2VR {
         {
             // Get walking state
 
-            menuValue.type = XR_TYPE_ACTION_STATE_VECTOR2F;
+            walkValue.type = XR_TYPE_ACTION_STATE_VECTOR2F;
 
             XrActionStateGetInfo getInfo = { XR_TYPE_ACTION_STATE_GET_INFO };
             getInfo.action = walkAction;
@@ -842,7 +842,6 @@ namespace BF2VR {
         Vec3 lookEuler = eulerFromQuat(lookQuat);
 
         float yaw = -hudEuler.x;
-        
         float pitch = hudEuler.z;
 
         GameService::updateCamera(HMDPosition, HMDPose, yaw, pitch, aimLoc, aimQuat);

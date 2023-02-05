@@ -38,8 +38,17 @@ namespace BF2VR {
 	void InputService::update() {
 
 		XINPUT_GAMEPAD gamepad{};
-		gamepad.sThumbLX = thumbLX;
-		gamepad.sThumbLY = thumbLY;
+		if (useRight)
+		{
+			gamepad.sThumbRX = thumbLX;
+			gamepad.sThumbRY = thumbLY;
+		}
+		else
+		{
+			gamepad.sThumbLX = thumbLX;
+			gamepad.sThumbLY = thumbLY;
+		}
+
 		gamepad.bRightTrigger = rightTrigger;
 		gamepad.bLeftTrigger = leftTrigger;
 		gamepad.wButtons = buttons;

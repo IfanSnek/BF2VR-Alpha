@@ -2,6 +2,7 @@
 #include <Windows.h>
 #include "Utils.h"
 #include "OpenXRService.h"
+#include "InputService.h"
 
 namespace BF2VR {
 
@@ -118,18 +119,41 @@ namespace BF2VR {
                 return;
             }
 
-            ClientSoldierEntity* soldier = player->controlledControllable;
-            if (!isValidPtr(soldier)) {
-                return;
+            Vec3 playerPosition = {0, 0, 0};
+            float heightOffset = 0;
+            bool inVehicle = false;
+
+            AttachedControllable* vehicle = player->attachedControllable;
+
+            if (isValidPtr(vehicle))
+            {
+                playerPosition = vehicle->GetVehicleLocation();
+
+                if (playerPosition.x == 0 && playerPosition.y == 0 && playerPosition.z == 0)
+                {
+                    warn("Vehicle could not be located.");
+                }
+
+                heightOffset = .8f;
+                inVehicle = true;
+            }
+            else {
+
+                ClientSoldierEntity* soldier = player->controlledControllable;
+                if (!isValidPtr(soldier)) {
+                    return;
+                }
+
+                ClientSoldierPrediction* prediction = soldier->clientSoldierPrediction;
+                if (!isValidPtr(prediction)) {
+                    return;
+
+                }
+                playerPosition = prediction->Location;
+                heightOffset = soldier->HeightOffset;
             }
 
-            ClientSoldierPrediction* prediction = soldier->clientSoldierPrediction;
-            if (!isValidPtr(prediction)) {
-                return;
-            }
-
-            Vec3 playerPosition = prediction->Location;
-            float heightOffset = soldier->HeightOffset;
+            InputService::useRight = inVehicle;
 
             outputHeadMatrix.o.x += playerPosition.x;
             outputHeadMatrix.o.y += playerPosition.y - heightOffset + 3;
@@ -140,6 +164,11 @@ namespace BF2VR {
 
             // Update the view angles
             // Check wich ViewAngle pointer is active. The signature of the active viewangle will start with 12 0xff bytes
+
+            if (inVehicle)
+            {
+                return;
+            }
 
             int matches = 0;
 

@@ -38,7 +38,7 @@ namespace BF2VR
             return;
         }
 
-        if (warnCount > 20)
+        if (warnCount > 50)
         {
             error("Too many warnings. Halting log.");
             warnCount = -1;

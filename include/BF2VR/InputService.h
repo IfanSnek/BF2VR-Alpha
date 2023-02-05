@@ -12,6 +12,7 @@ namespace BF2VR {
 		static inline byte leftTrigger = 0;
 		static inline byte rightTrigger = 0;
 		static inline WORD buttons = 0;
+		static inline bool useRight = false;
 
 		static bool connect();
 		static void update();

@@ -2,8 +2,12 @@
 #include <windows.h>
 #include <stdint.h>
 #include <vector>
+#include <string>
 #include "Matrices.h"
-#include "Utils.h"
+#include "Types.h"
+
+inline bool isValidRange(DWORD64 p) { return (p >= 0x10000) && (p < 0x000F000000000000); }
+
 
 static const DWORD64 OFFSETGAMECONTEXT  = 0x143DD7948;
 static const DWORD64 OFFSETLOCALAIMER   = 0x14406E610;
@@ -116,6 +120,119 @@ public:
 	char pad_0570[3864]; //0x0570
 }; //Size: 0x1488
 
+class VehicleEntityData
+{
+public:
+	char pad_0000[0x120]; //0x0000
+	Vec3 interactionOffset; //0x0120
+	Vec3 m_VictimOffsetOverride; //0x0130
+	char* VehicleName; //0x0238
+	char pad_0240[520]; //0x0240
+
+	char* GetName() {
+		if (this != nullptr && this->VehicleName != nullptr) {
+			return this->VehicleName;
+		}
+		return (char*)"\0";
+	}
+};
+
+class VehicleLocation
+{
+public:
+	DWORD64 classcheck; //0x0000
+	char pad_0008[88]; //0x0008
+	Vec3 Velocity; //0x0060  <-don't use
+	char pad_006C[4]; //0x006C
+	Vec3 Location; //0x0070
+}; //Size: 0x0168
+
+
+class AttachedControllable
+{
+public:
+	char pad_0000[48]; //0x0000
+	class VehicleEntityData* vehicleEntity; //0x0030
+	char pad_0038[1592]; //0x0038
+	DWORD64 loc1; //0x0670
+	char pad_0678[24]; //0x0678
+	DWORD64 loc2; //0x0690
+	char pad_0698[24]; //0x0698
+	DWORD64 loc3; //0x06B0
+	char pad_06B8[24]; //0x06B8
+	DWORD64 loc4; //0x06D0
+	char pad_06D8[24]; //0x06D8
+	DWORD64 loc5; //0x06F0
+
+	VehicleEntityData* GetVehicleEntityData() {
+		if (this != nullptr && this->vehicleEntity != nullptr) {
+			return this->vehicleEntity;
+		}
+	}
+
+	Vec3 GetVehicleLocation()
+	{
+		DWORD64 sig = 5416674584;
+
+		if (this != nullptr && this->vehicleEntity != nullptr) {
+
+			VehicleLocation* location = (VehicleLocation*)this->loc1;
+			if (location != nullptr)
+			{
+				if (location->classcheck == sig)
+				{
+					return location->Location;
+				}
+			}
+
+			
+			location = (VehicleLocation*)this->loc2;
+			if (location != nullptr)
+			{
+				if (location->classcheck == sig)
+				{
+					return location->Location;
+				}
+			}
+			
+
+			location = (VehicleLocation*)this->loc3;
+			if (location != nullptr)
+			{
+				if (location->classcheck == sig)
+				{
+					return location->Location;
+				}
+			}
+			
+
+			location = (VehicleLocation*)this->loc4;
+			if (location != nullptr)
+			{
+				if (location->classcheck == sig)
+				{
+					return location->Location;
+				}
+			}
+			
+
+			location = (VehicleLocation*)this->loc5;
+			if (location != nullptr)
+			{
+				if (location->classcheck == sig)
+				{
+					return location->Location;
+				}
+			}
+			
+
+			return Vec3(0, 0, 0);
+		}
+	}
+
+}; //Size: 0x1058
+
+
 class ClientPlayer
 {
 public:
@@ -123,7 +240,9 @@ public:
 	char* Username; //0x0018
 	char pad_0020[56]; //0x0020
 	uint32_t Team; //0x0058
-	char pad_005C[436]; //0x005C
+	char pad_005C[420]; //0x005C
+	class AttachedControllable* attachedControllable; //0x0200
+	char pad_0208[8]; //0x0208
 	class ClientSoldierEntity* controlledControllable; //0x0210
 	char pad_0218[1704]; //0x0218
 }; //Size: 0x08C0

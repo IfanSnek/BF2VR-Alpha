@@ -250,7 +250,7 @@ $$$$$$$  |$$ |      $$$$$$$$\    \$  /   $$ |  $$ |
 			Sleep(300);
 			if (inject() == 0)
 			{
-				cout << "Injected! If you need to reinject, press F1 within 10 seconds of injection" << endl;
+				cout << "Injected! If you need to reinject, press F1 then Enter within 10 seconds of injection" << endl;
 				Sleep(300);
 				bool pressed = false;
 				for (int i = 0; i < 500; i++)
