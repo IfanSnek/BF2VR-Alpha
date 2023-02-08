@@ -6,8 +6,6 @@
 #include "Matrices.h"
 #include "Types.h"
 
-inline bool isValidRange(DWORD64 p) { return (p >= 0x10000) && (p < 0x000F000000000000); }
-
 
 static const DWORD64 OFFSETGAMECONTEXT  = 0x143DD7948;
 static const DWORD64 OFFSETLOCALAIMER   = 0x14406E610;
@@ -232,7 +230,6 @@ public:
 
 }; //Size: 0x1058
 
-
 class ClientPlayer
 {
 public:
@@ -250,74 +247,56 @@ public:
 class UpdatePoseResultData
 {
 public:
-	class QuatTransform
-	{
-	public:
-		Vec4 m_TransAndScale; //0x0000 
-		Vec4 m_Rotation; //0x0010 
-	};//Size=0x0020
+	class QuatTransformArray* transforms; //0x0000
+}; //Size: 0x0008
 
-	QuatTransform* m_LocalTransforms; //0x0000 
-	QuatTransform* m_WorldTransforms; //0x0008 
-	QuatTransform* m_Unk; //0x0010 
-	QuatTransform* m_Unk1; //0x0018 
-	QuatTransform* m_Unk2; //0x0020 
-	QuatTransform* m_ActiveWorldTransforms; //0x0028 
-	QuatTransform* m_ActiveLocalTransforms; //0x0030 
-	__int32 m_Slot; //0x0038 
-	__int32 m_ReaderIndex; //0x003C 
-	unsigned char m_ValidTransforms; //0x0040 
-	unsigned char m_PoseUpdateNeeded; //0x0041 
-	unsigned char m_PoseNeeded; //0x0042 
-};
-
-enum HumanBones
-{
-	Head = 48,
-	Neck = 46,
-	Spine = 5,
-	Spine1 = 6,
-	Spine2 = 7,
-	LeftShoulder = 8,
-	LeftElbowRoll = 13,
-	RightShoulder = 144,
-	RightElbowRoll = 149,
-	LeftHand = 17,
-	RightHand = 153,
-	RightKneeRoll = 235,
-	LeftKneeRoll = 223,
-	RightFoot = 228,
-	LeftFoot = 216
-};
-
-class SkeletonAsset
+class ClientBoneCollisionComponent
 {
 public:
-	char pad_0000[24]; //0x0000
-	char* CharacterType; //0x0018
-	char** BoneNames; //0x0020
-};
+	char pad_0000[72]; //0x0000
+	class AnimationSkeleton* skeleton; //0x0048
+	class UpdatePoseResultData pose; //0x0050
+	char pad_0058[8]; //0x0058
+}; //Size: 0x0060
 
 class AnimationSkeleton
 {
 public:
 	char pad_0000[8]; //0x0000
-	SkeletonAsset* skeletonAsset; //0x0008
-	__int32 m_BoneCount; //0x0010
-};
+	class SkeletonAsset* asset; //0x0008
+	int32_t boneCount; //0x0010
+}; //Size: 0x0014
 
-class ClientBoneCollisionComponent
+class SkeletonAsset
 {
 public:
-	UpdatePoseResultData m_ragdollTransforms; //0x0000
-	char pad_0008[64]; //0x0008
-	AnimationSkeleton* animationSkeleton; //0x0048
-};
+	char pad_0000[144]; //0x0000
+	char* boneNames[98]; //0x0090
+}; //Size: 0x03A0
 
-class WSClientSoldierEntity
+
+class QuatTransform
 {
 public:
-};
+	Vec4 Scale; //0x0000
+	Vec4 Quat; //0x0010
+	Vec4 Translation; //0x0020
+}; //Size: 0x0020
+
+class QuatTransformArray
+{
+public:
+	class QuatTransform transform[98]; //0x0000
+}; //Size: 0x0C40
+
+class LinearTransform
+{
+public:
+	Vec3 right; //0x0000
+	Vec3 up; //0x000C
+	Vec3 forward; //0x0018
+	Vec3 position; //0x0024
+}; //Size: 0x0030
 
 class ClientSoldierEntity
 {

@@ -10,7 +10,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DLL_Injector", "include\Inj
 		{44A45E6D-FDB8-4B50-8520-D1A4F1E61FB5} = {44A45E6D-FDB8-4B50-8520-D1A4F1E61FB5}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SDKDumper", "include\SDKDumper\SDKDumper.vcxproj", "{FDBB9F94-AACB-4982-91EC-2B7B7A7AB366}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SDKTester", "include\Tests\SDKTester.vcxproj", "{FDBB9F94-AACB-4982-91EC-2B7B7A7AB366}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

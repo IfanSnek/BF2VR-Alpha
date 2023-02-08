@@ -99,7 +99,6 @@ namespace BF2VR {
 						result.offset = offset;
 						result.pVTable = addr;
 						typeInfoMemberResults.push_back(result);
-                        success("Found it.");
                         return *(T*)((DWORD64)addr + offset);
                     }
 

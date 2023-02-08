@@ -3,6 +3,7 @@
 #include "Utils.h"
 #include "OpenXRService.h"
 #include "InputService.h"
+#include "BFSDK.h"
 
 namespace BF2VR {
 
@@ -40,11 +41,13 @@ namespace BF2VR {
             OpenXRService::updatePoses();
             a2->cameraTransform = cameraTransfrom;
         }
+
+
         return updateOriginal(a1, a2);
     }
 
     // Function to set the view of the game camera
-    void GameService::updateCamera(Vec3 hmdLocation, Matrix4 hmdRot, float yaw, float pitch, Vec3 gunPos, Vec4 gunRot) {
+    void GameService::updateCamera(Vec3 hmdLocation, Matrix4 hmdRot, float yaw, float pitch) {
         GameRenderer* pGameRenderer = GameRenderer::GetInstance();
         if (!isValidPtr(pGameRenderer))
         {
@@ -138,14 +141,17 @@ namespace BF2VR {
                 inVehicle = true;
             }
             else {
+                inVehicle = false;
 
                 ClientSoldierEntity* soldier = player->controlledControllable;
                 if (!isValidPtr(soldier)) {
+                    InputService::useRight = inVehicle;
                     return;
                 }
 
                 ClientSoldierPrediction* prediction = soldier->clientSoldierPrediction;
                 if (!isValidPtr(prediction)) {
+                    InputService::useRight = inVehicle;
                     return;
 
                 }
@@ -238,116 +244,96 @@ namespace BF2VR {
                 }
             }
             return;
-
-
-            // Update the skeleton 
-            //WIP
-            /*
-            
-            WSClientSoldierEntity* WSsoldier = nullptr;
-
-            if (typeInfoMemberResults.size() == 0)
-            {
-                // This will be slow the first time
-                log("Scanning for player soldier");
-                WSsoldier = GetClassFromName<WSClientSoldierEntity*>(soldier, "WSClientSoldierEntity", 0xFFFFFF, true);
-                deb(std::to_string((DWORD64)WSsoldier));
-            }
-            else {
-                WSsoldier = GetClassFromName<WSClientSoldierEntity*>(soldier, "WSClientSoldierEntity");
-            }
-
-
-            if (!isValidPtr(WSsoldier))
-            {
-                warn("Could not find address for the player soldier. 6dof guns won't work this frame.");
-                return;
-            }
-
-            ClientBoneCollisionComponent* Bones = nullptr;
-
-            if (typeInfoMemberResults.size() < 2)
-            {
-                // This will be slow the first time
-                log("Scanning for player skeleton");
-                Bones = GetClassFromName<ClientBoneCollisionComponent*>(WSsoldier, "ClientBoneCollisionComponent", 0xFFFFFF, true);
-                deb(std::to_string((DWORD64)Bones));
-            }
-            else {
-                Bones = GetClassFromName<ClientBoneCollisionComponent*>(WSsoldier, "ClientBoneCollisionComponent");
-            }
-
-
-            if (!isValidPtr(Bones))
-            {
-                warn("Could not find address for the player skeleton. 6dof guns won't work this frame.");
-                return;
-            }
-
-            UpdatePoseResultData PoseResult = Bones->m_ragdollTransforms;
-            auto form = PoseResult.m_ActiveWorldTransforms;
-
-
-            if (!isValidPtr(form))
-            {
-                log("Could not find address for the player gun bone. 6dof guns won't work this frame.");
-                return;
-            }
-
-            deb(std::to_string(form[207].m_Rotation.x));
-
-            AnimationSkeleton* pSkeleton = Bones->animationSkeleton;
-            if (!isValidPtr(pSkeleton))
-            {
-                warn("Could not find address for the AnimationSkeleton. 6dof guns won't work this frame.");
-                return;
-            }
-
-
-            SkeletonAsset* skeletonAsset = pSkeleton->skeletonAsset;
-            if (!isValidPtr(skeletonAsset))
-            {
-                warn("Could not find address for the AnimationSkeletonAsset. 6dof guns won't work this frame.");
-                return;
-            }
-
-            int BoneId = -1;
-            for (int i = 0; i < pSkeleton->m_BoneCount; i++)
-            {
-                char* name = skeletonAsset->BoneNames[i];
-                deb(name);
-                if (_stricmp(name, "Gun") == 0)
-                    BoneId = i;
-            }
-
-            if (BoneId == -1)
-            { 
-                warn("Could not find the gun bone. 6dof guns won't work this frame.");
-                return;
-            }
-
-            PoseResult = Bones->m_ragdollTransforms;
-
-            if (PoseResult.m_ValidTransforms)
-            {
-                UpdatePoseResultData::QuatTransform* pQuat = PoseResult.m_ActiveWorldTransforms;
-                if (!isValidPtr(pQuat)) {
-                    warn("Could not find the gun bone transform. 6dof guns won't work this frame.");
-                    return;
-                }
-                pQuat[BoneId].m_TransAndScale.x = gunPos.x;
-                pQuat[BoneId].m_TransAndScale.y = gunPos.y;
-                pQuat[BoneId].m_TransAndScale.z = gunPos.z;
-                pQuat[BoneId].m_TransAndScale.w = 1;
-
-                pQuat[BoneId].m_Rotation = gunRot;
-            }
-            */
         }
 
     }
 
+    void GameService::updateBone(const char* boneName, Vec3 location, Vec4 rotation)
+    {
+        GameContext* CurrentContext = GameContext::GetInstance();
+        if (!isValidPtr(CurrentContext)) {
+            return;
+        }
+        
+        PlayerManager* playerManager = CurrentContext->playerManager;
+        if (!isValidPtr(playerManager)) {
+            return;
+        }
 
+        ClientPlayer* player = playerManager->LocalPlayer;
+        if (!isValidPtr(player)) {
+            return;
+        }
+        
+        ClientSoldierEntity* soldier = player->controlledControllable;
+        if (!isValidPtr(soldier)) {
+            return;
+        }
+
+        ClientSoldierPrediction* prediction = soldier->clientSoldierPrediction;
+        if (!isValidPtr(prediction)) {
+            return;
+
+        }
+        ClientBoneCollisionComponent* bones = GetClassFromName<ClientBoneCollisionComponent*>(soldier, "ClientBoneCollisionComponent");
+        if (bones == nullptr)
+        {
+            bones = GetClassFromName<ClientBoneCollisionComponent*>(soldier, "ClientBoneCollisionComponent", 0x2000, true);
+        }
+        if (!isValidPtr(bones)) {
+            warn("Could not find bones. 6dof hands will not work.");
+            return;
+        }
+
+        // Find bone index
+
+        AnimationSkeleton* skeleton = bones->skeleton;
+        if (!isValidPtr(bones)) {
+            warn("Could not find animation skeleton. 6dof hands will not work.");
+            return;
+        }
+
+        SkeletonAsset* asset = skeleton->asset;
+        if (!isValidPtr(bones)) {
+            warn("Could not find skeleton asset. 6dof hands will not work.");
+            return;
+        }
+
+        int boneIndex = -1;
+
+        for (int i = 0; i < skeleton->boneCount; i++) {
+            if (strcmp(asset->boneNames[i], boneName) == 0)
+            {
+                boneIndex = i;
+            }
+        }
+
+        if (boneIndex == -1)
+        {
+            warn("Bone not found by name. 6dof hands will not work.");
+            return;
+        }
+
+        // Set vector
+        UpdatePoseResultData pose = bones->pose;
+        QuatTransformArray* transforms = pose.transforms;
+        if (!isValidPtr(bones)) {
+            warn("Could not find bone transform array. 6dof hands will not work.");
+            return;
+        }
+
+        location.x += prediction->Location.x;
+        location.y += prediction->Location.y;
+        location.z += prediction->Location.z;
+
+        transforms->transform[boneIndex].Translation .x = location.x;
+        transforms->transform[boneIndex].Translation.y = location.y;
+        transforms->transform[boneIndex].Translation.z = location.z;
+
+        transforms->transform[boneIndex].Quat = rotation;
+
+
+    }
 
     void GameService::setUIDrawState(bool enabled) {
         UISettings* pUISettings = UISettings::GetInstance();

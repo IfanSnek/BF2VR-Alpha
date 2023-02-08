@@ -790,6 +790,7 @@ namespace BF2VR {
 
         const auto [hq1, hq2, hq3, hq0] = handLocations[1].pose.orientation;
         const auto [hlx, hly, hlz] = handLocations[1].pose.position;
+
         Vec3 aimLoc;
         aimLoc.x = hlx;
         aimLoc.y = hly;
@@ -844,7 +845,8 @@ namespace BF2VR {
         float yaw = -hudEuler.x;
         float pitch = hudEuler.z;
 
-        GameService::updateCamera(HMDPosition, HMDPose, yaw, pitch, aimLoc, aimQuat);
+        GameService::updateCamera(HMDPosition, HMDPose, yaw, pitch);
+        //GameService::updateBone("Wep_Root", aimLoc, aimQuat);
 
         float speed = 1.3f;
         DirectXService::crosshairX = (-aimEuler.x + lookEuler.x) * speed;

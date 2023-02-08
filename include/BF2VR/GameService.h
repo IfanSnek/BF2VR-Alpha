@@ -12,9 +12,14 @@ namespace BF2VR {
 		static inline Vec4 cameraPosition = { 0, 0, 0, 0 };
 		static inline char* level = nullptr;
 
+		static inline Vec3 aimLoc = Vec3(0,0,0);
+		static inline Vec4 aimQuat = Vec4(0,0,0,0);
+
 		static bool hookCamera();
 
-		static void updateCamera(Vec3 cameraLocation, Matrix4 cameraViewMatrix, float aimYaw, float aimPitch, Vec3 gunPos, Vec4 gunRot);
+		static void updateCamera(Vec3 cameraLocation, Matrix4 cameraViewMatrix, float aimYaw, float aimPitch);
+
+		static void updateBone(const char* boneName, Vec3 location, Vec4 rotation);
 
 		static void setUIDrawState(bool enabled);
 

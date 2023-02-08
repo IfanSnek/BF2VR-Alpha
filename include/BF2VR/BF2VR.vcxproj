@@ -167,6 +167,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\third-party\OpenXR\xrmath.h" />
+    <ClInclude Include="BFSDK.h" />
     <ClInclude Include="DirectXService.h" />
     <ClInclude Include="GameService.h" />
     <ClInclude Include="InputService.h" />
