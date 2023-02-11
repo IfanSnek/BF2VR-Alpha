@@ -197,53 +197,17 @@ T RecursiveFind(void* addr, const char* name, int level, const char* parentName)
 	return nullptr;
 }
 
-PVOID(*origPlayerPoses)() = nullptr;
-
-PVOID updatePlayerPoses()
+typedef __int64(PoseUpdate)(int a1, int a2, int a3, int a4, __int64 a5);
+PoseUpdate* Original = nullptr;
+__int64 Hook(int a1, int a2, int a3, int a4, __int64 a5)
 {
-	sdk << "hi" << endl;
-	return nullptr;
-}
+	__int64 toReturn = Original(a1, a2, a3, a4, a5);
 
-DWORD __stdcall mainThread(HMODULE module)
-{
-
-	AllocConsole();
-	freopen("CONOUT$", "w", stdout);
-
-	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-	SetConsoleTextAttribute(hConsole,
-		FOREGROUND_BLUE | FOREGROUND_INTENSITY);
-
-	cout << R""""(
-$$$$$$$\  $$$$$$$$\  $$$$$$\  $$\    $$\ $$$$$$$\  
-$$  __$$\ $$  _____|$$  __$$\ $$ |   $$ |$$  __$$\ 
-$$ |  $$ |$$ |      \__/  $$ |$$ |   $$ |$$ |  $$ |
-$$$$$$$\ |$$$$$\     $$$$$$  |\$$\  $$  |$$$$$$$  |
-$$  __$$\ $$  __|   $$  ____/  \$$\$$  / $$  __$$< 
-$$ |  $$ |$$ |      $$ |        \$$$  /  $$ |  $$ |
-$$$$$$$  |$$ |      $$$$$$$$\    \$  /   $$ |  $$ |
-\_______/ \__|      \________|    \_/    \__|  \__|
-)"""";
-
-	SetConsoleTextAttribute(hConsole, FOREGROUND_INTENSITY);
-
-	Sleep(200);
-
-	DWORD64 addr = 0x14625454F;
-
-	
-	MH_Initialize();
-	//cout << MH_CreateHook((LPVOID)addr, &updatePlayerPoses, reinterpret_cast<LPVOID*>(&origPlayerPoses)) << endl;
-
-
+	cout << "yesss" << endl;
 
 	auto* base = GameContext::GetInstance()->playerManager->LocalPlayer->controlledControllable;
 
 	fbClientSoldierWeaponsComponent* find = GetClassFromName<fbClientSoldierWeaponsComponent*>((void*)base, "ClientBoneCollisionComponent");
-
-	
-	// Created with ReClass.NET 1.2 by KN4CK3R
 
 
 	class QuatTransform
@@ -292,15 +256,54 @@ $$$$$$$  |$$ |      $$$$$$$$\    \$  /   $$ |  $$ |
 
 	ClientBoneCollisionComponent* bones = (ClientBoneCollisionComponent*)find;
 
+	bones->pose.N00000FC3->transform[184].Translation.y = 1;
 
-	cout << format("{:#8x}", (DWORD64)find) << endl;
+	return toReturn;
+}
+
+DWORD __stdcall mainThread(HMODULE module)
+{
+
+	AllocConsole();
+	freopen("CONOUT$", "w", stdout);
+
+	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+	SetConsoleTextAttribute(hConsole,
+		FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+
+	cout << R""""(
+$$$$$$$\  $$$$$$$$\  $$$$$$\  $$\    $$\ $$$$$$$\  
+$$  __$$\ $$  _____|$$  __$$\ $$ |   $$ |$$  __$$\ 
+$$ |  $$ |$$ |      \__/  $$ |$$ |   $$ |$$ |  $$ |
+$$$$$$$\ |$$$$$\     $$$$$$  |\$$\  $$  |$$$$$$$  |
+$$  __$$\ $$  __|   $$  ____/  \$$\$$  / $$  __$$< 
+$$ |  $$ |$$ |      $$ |        \$$$  /  $$ |  $$ |
+$$$$$$$  |$$ |      $$$$$$$$\    \$  /   $$ |  $$ |
+\_______/ \__|      \________|    \_/    \__|  \__|
+)"""";
+
+	SetConsoleTextAttribute(hConsole, FOREGROUND_INTENSITY);
+
+	Sleep(200);
+
+	// Patch the Bone Update JMP
+	// orig: jmp 149927640
+	DWORD64 addr = 0x142150910;
+	PVOID target = (PVOID)addr;
+
+	
+	MH_Initialize();
+	cout << MH_CreateHook((LPVOID)addr, &Hook, reinterpret_cast<LPVOID*>(&Original)) << endl;
+	cout << MH_EnableHook(MH_ALL_HOOKS) << endl;
+
+
 
 	for (;;)
 
 	{
-		bones->pose.N00000FC3->transform[49].Translation.y = 1;
 		if (GetAsyncKeyState(VK_F2))
 		{
+			MH_DisableHook(MH_ALL_HOOKS);
 			MH_RemoveHook(MH_ALL_HOOKS);
 			MH_Uninitialize();
 			break;

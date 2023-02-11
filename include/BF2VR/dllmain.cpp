@@ -77,7 +77,7 @@ DWORD __stdcall mainThread(HMODULE module)
     }
 
     log("Attempting to hook the BF2 Camera ...");
-    if (!GameService::hookCamera()) {
+    if (!GameService::enableHooks()) {
         error("Unable to Hook the BF2 Camera.");
         shutdown();
     }

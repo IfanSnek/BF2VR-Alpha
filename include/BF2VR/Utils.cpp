@@ -4,7 +4,6 @@
 #include "DirectXService.h"
 #include "OpenXRService.h"
 #include "InputService.h"
-#include "HookHelper.h"
 
 namespace BF2VR
 {
@@ -114,7 +113,12 @@ namespace BF2VR
         Sleep(100); // Let a few frames render for anyncronous present
 
         log("Unhooking Camera");
-        HookHelper::destroyHook(OFFSETCAMERA);
+        MH_DisableHook((LPVOID)OFFSETCAMERA);
+        MH_RemoveHook((LPVOID)OFFSETCAMERA);
+
+        log("Unhooking Pose");
+        MH_DisableHook((LPVOID)OFFSETPOSE);
+        MH_RemoveHook((LPVOID)OFFSETPOSE);
 
         log("Ending VR");
         OpenXRService::endXR();
@@ -242,5 +246,16 @@ namespace BF2VR
         v.y = asin(2 * test); // attitude
         v.z = atan2(2 * q.x * q.w - 2 * q.y * q.z, 1 - 2 * sqx - 2 * sqz); // bank
         return v;
+    }
+
+
+    Vec4 quatFromEuler(Vec3 e)
+    {
+        auto [yaw, pitch, roll] = e;
+        float qx = sin(roll / 2) * cos(pitch / 2) * cos(yaw / 2) - cos(roll / 2) * sin(pitch / 2) * sin(yaw / 2);
+        float qy = cos(roll / 2) * sin(pitch / 2) * cos(yaw / 2) + sin(roll / 2) * cos(pitch / 2) * sin(yaw / 2);
+        float qz = cos(roll / 2) * cos(pitch / 2) * sin(yaw / 2) - sin(roll / 2) * sin(pitch / 2) * cos(yaw / 2);
+        float qw = cos(roll / 2) * cos(pitch / 2) * cos(yaw / 2) + sin(roll / 2) * sin(pitch / 2) * sin(yaw / 2);
+        return Vec4(qx, qy, qz, qw);
     }
 }

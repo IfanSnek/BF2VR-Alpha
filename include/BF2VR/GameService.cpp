@@ -7,34 +7,6 @@
 
 namespace BF2VR {
 
-    bool GameService::hookCamera() {
-
-        pRenderView = GameRenderer::GetInstance()->renderView;
-        if (!isValidPtr(pRenderView))
-        {
-            error("Unable to hook camera, Renderview is invalid.");
-            return false;
-        }
-
-        MH_STATUS mh = MH_CreateHook(reinterpret_cast<LPVOID>(OFFSETCAMERA), reinterpret_cast<LPVOID>(&cameraUpdateDetour), reinterpret_cast<LPVOID*>(&updateOriginal));
-        if (mh != MH_OK && mh != 9) {
-            error("Error hooking BF2 UpdateCamera. Error: " + std::to_string(mh));
-            return false;
-        }
-        else if (mh == 9) {
-            error("Error hooking BF2 UpdateCamera. Try launching the mod again (you can leave the game open). If this doesn't stop, try respawning first.");
-            return false;
-        }
-
-        mh = MH_EnableHook(reinterpret_cast<LPVOID>(OFFSETCAMERA));
-        if (mh != MH_OK) {
-            error("Error enabling BF2 UpdateCamera hook. Error: " + std::to_string(mh));
-            return false;
-        }
-
-        return true;
-    }
-
     __int64 GameService::cameraUpdateDetour(CameraObject* a1, CameraObject* a2)
     {
         if (a2 == pRenderView && OpenXRService::isVRReady) {
@@ -43,7 +15,7 @@ namespace BF2VR {
         }
 
 
-        return updateOriginal(a1, a2);
+        return cameraUpdateOriginal(a1, a2);
     }
 
     // Function to set the view of the game camera
@@ -248,41 +220,37 @@ namespace BF2VR {
 
     }
 
-    void GameService::updateBone(const char* boneName, Vec3 location, Vec4 rotation)
+
+    __int64 GameService::poseUpdateDetour(int a1, int a2, int a3, int a4, __int64 a5)
     {
+        __int64 toReturn = poseUpdateOriginal(a1, a2, a3, a4, a5);
+
+
         GameContext* CurrentContext = GameContext::GetInstance();
         if (!isValidPtr(CurrentContext)) {
-            return;
+            return toReturn;
         }
-        
+
         PlayerManager* playerManager = CurrentContext->playerManager;
         if (!isValidPtr(playerManager)) {
-            return;
+            return toReturn;
         }
 
         ClientPlayer* player = playerManager->LocalPlayer;
         if (!isValidPtr(player)) {
-            return;
+            return toReturn;
         }
-        
+
         ClientSoldierEntity* soldier = player->controlledControllable;
         if (!isValidPtr(soldier)) {
-            return;
+            return toReturn;
         }
 
-        ClientSoldierPrediction* prediction = soldier->clientSoldierPrediction;
-        if (!isValidPtr(prediction)) {
-            return;
-
-        }
         ClientBoneCollisionComponent* bones = GetClassFromName<ClientBoneCollisionComponent*>(soldier, "ClientBoneCollisionComponent");
-        if (bones == nullptr)
-        {
-            bones = GetClassFromName<ClientBoneCollisionComponent*>(soldier, "ClientBoneCollisionComponent", 0x2000, true);
-        }
+
         if (!isValidPtr(bones)) {
             warn("Could not find bones. 6dof hands will not work.");
-            return;
+            return toReturn;
         }
 
         // Find bone index
@@ -290,49 +258,123 @@ namespace BF2VR {
         AnimationSkeleton* skeleton = bones->skeleton;
         if (!isValidPtr(bones)) {
             warn("Could not find animation skeleton. 6dof hands will not work.");
-            return;
+            return toReturn;
         }
 
         SkeletonAsset* asset = skeleton->asset;
         if (!isValidPtr(bones)) {
             warn("Could not find skeleton asset. 6dof hands will not work.");
-            return;
+            return toReturn;
         }
 
-        int boneIndex = -1;
+        for (boneState state : boneStates)
+        {
+            int boneIndex = -1;
 
-        for (int i = 0; i < skeleton->boneCount; i++) {
-            if (strcmp(asset->boneNames[i], boneName) == 0)
+            for (int i = 0; i < skeleton->boneCount; i++) {
+                if (strcmp(asset->boneNames[i], state.boneName) == 0)
+                {
+                    boneIndex = i;
+                }
+            }
+
+            if (boneIndex == -1)
             {
-                boneIndex = i;
+                warn("Bone not found by name. 6dof hands will not work.");
+                return toReturn;
+            }
+
+            // Set vector
+            UpdatePoseResultData pose = bones->pose;
+            QuatTransformArray* transforms = pose.pArray;
+            if (!isValidPtr(bones)) {
+                warn("Could not find bone transform array. 6dof hands will not work.");
+                return toReturn;
+            }
+
+            transforms->transform[boneIndex].Translation.x = state.translation.x;
+            //transforms->transform[boneIndex].Translation.y = state.translation.y;
+            //transforms->transform[boneIndex].Translation.z = state.translation.z;
+
+            if(state.rotate)
+                transforms->transform[boneIndex].Quat = state.rotation;
+
+            if (!state.show)
+            {
+                transforms->transform[boneIndex].Scale = Vec4(0, 0, 0, 0);
             }
         }
 
-        if (boneIndex == -1)
+        return toReturn;
+    }
+
+
+    void GameService::updateBone(const char* boneName, Vec3 location, Vec4 rotation, bool show, bool rotate)
+    {
+        for (int i = 0; i < boneStates.size(); i++)
+        { 
+            boneState state = boneStates.at(i);
+            if (strcmp(state.boneName, boneName) == 0)
+            {
+
+                state.translation = location;
+                state.rotation = rotation;
+                state.show = show;
+                state.rotate = rotate;
+
+                boneStates.at(i) = state;
+
+                return;
+            }
+        }
+
+        boneStates.push_back({ boneName, location, rotation, show });
+    }
+
+
+
+    bool GameService::enableHooks() {
+
+        pRenderView = GameRenderer::GetInstance()->renderView;
+        if (!isValidPtr(pRenderView))
         {
-            warn("Bone not found by name. 6dof hands will not work.");
-            return;
+            error("Unable to hook camera, Renderview is invalid.");
+            return false;
         }
 
-        // Set vector
-        UpdatePoseResultData pose = bones->pose;
-        QuatTransformArray* transforms = pose.transforms;
-        if (!isValidPtr(bones)) {
-            warn("Could not find bone transform array. 6dof hands will not work.");
-            return;
+        MH_STATUS mh = MH_CreateHook((LPVOID)OFFSETCAMERA, (LPVOID)&cameraUpdateDetour, reinterpret_cast<LPVOID*>(&cameraUpdateOriginal));
+        if (mh != MH_OK && mh != 9) {
+            error("Error hooking BF2 UpdateCamera. Error: " + std::to_string(mh));
+            return false;
+        }
+        else if (mh == 9) {
+            error("Error hooking BF2 UpdateCamera. Try launching the mod again (you can leave the game open). If this doesn't stop, try respawning first.");
+            return false;
         }
 
-        location.x += prediction->Location.x;
-        location.y += prediction->Location.y;
-        location.z += prediction->Location.z;
+        mh = MH_EnableHook((LPVOID)OFFSETCAMERA);
+        if (mh != MH_OK) {
+            error("Error enabling BF2 UpdateCamera hook. Error: " + std::to_string(mh));
+            return false;
+        }
 
-        transforms->transform[boneIndex].Translation .x = location.x;
-        transforms->transform[boneIndex].Translation.y = location.y;
-        transforms->transform[boneIndex].Translation.z = location.z;
+        mh = MH_CreateHook((LPVOID)OFFSETPOSE, (LPVOID)&poseUpdateDetour, reinterpret_cast<LPVOID*>(&poseUpdateOriginal));
+        if (mh != MH_OK && mh != 9) {
+            error("Error hooking BF2 Updatepose. Error: " + std::to_string(mh));
+            return false;
+        }
+        else if (mh == 9) {
+            error("Error hooking BF2 Updatepose. Try launching the mod again (you can leave the game open). If this doesn't stop, try respawning first.");
+            return false;
+        }
 
-        transforms->transform[boneIndex].Quat = rotation;
+        mh = MH_EnableHook((LPVOID)OFFSETPOSE);
+        if (mh != MH_OK) {
+            error("Error enabling BF2 Updatepose hook. Error: " + std::to_string(mh));
+            return false;
+        }
 
-
+        return true;
     }
 
     void GameService::setUIDrawState(bool enabled) {

@@ -1,8 +1,8 @@
 #pragma once
 #include <string>
 #include <vector>
-#include "HookHelper.h"
 #include "Types.h"
+#include "../../third-party/minhook/MinHook.h"
 #include <fstream>
 
 namespace BF2VR {
@@ -35,6 +35,7 @@ namespace BF2VR {
 	void saveConfig();
 
 	Vec3 eulerFromQuat(Vec4 q);
+	Vec4 quatFromEuler(Vec3 e);
 
     // https://github.com/onra2/swbf2-internal/blob/master/swbf2%20onra2/Classes.h
 
@@ -47,17 +48,16 @@ namespace BF2VR {
 	inline std::vector<typeInfoMemberResult> typeInfoMemberResults;
 
     template <class T = void*>
-    T GetClassFromName(void* addr, const char* name, SIZE_T classSize = 0x2000, bool rescan = false) {
-        if (!rescan) {
-            for (typeInfoMemberResult& result : typeInfoMemberResults) {
-                if (result.pVTable == addr) {
-                    if (result.name == name) {
-                        return *(T*)((DWORD64)addr + result.offset);
-                    }
+    T GetClassFromName(void* addr, const char* name, SIZE_T classSize = 0x2000) {
+
+        for (typeInfoMemberResult& result : typeInfoMemberResults) {
+            if (result.pVTable == addr) {
+                if (result.name == name) {
+                    return *(T*)((DWORD64)addr + result.offset);
                 }
             }
         }
-
+        
         const byte INSTR_LEA = 0x48;
         const byte INSTR_RET = 0xc3;
         const byte INSTR_JMP = 0xe9;

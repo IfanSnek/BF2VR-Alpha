@@ -11,7 +11,9 @@ static const DWORD64 OFFSETGAMECONTEXT  = 0x143DD7948;
 static const DWORD64 OFFSETLOCALAIMER   = 0x14406E610;
 static const DWORD64 OFFSETGAMERENDERER = 0x143ffbe10;
 static const DWORD64 OFFSETUISETTINGS   = 0x143aebb80;
+
 static const DWORD64 OFFSETCAMERA       = 0x1410c7010;
+static const DWORD64 OFFSETPOSE			= 0x142150910;
 
 class RenderView {
 public:
@@ -244,10 +246,24 @@ public:
 	char pad_0218[1704]; //0x0218
 }; //Size: 0x08C0
 
+class QuatTransform
+{
+public:
+	Vec4 Scale; //0x0000
+	Vec4 Quat; //0x0010
+	Vec4 Translation; //0x0020
+}; //Size: 0x0030
+
+class QuatTransformArray
+{
+public:
+	class QuatTransform transform[98]; //0x0000
+}; //Size: 0x1260
+
 class UpdatePoseResultData
 {
 public:
-	class QuatTransformArray* transforms; //0x0000
+	class QuatTransformArray* pArray; //0x0000
 }; //Size: 0x0008
 
 class ClientBoneCollisionComponent
@@ -273,21 +289,6 @@ public:
 	char pad_0000[144]; //0x0000
 	char* boneNames[98]; //0x0090
 }; //Size: 0x03A0
-
-
-class QuatTransform
-{
-public:
-	Vec4 Scale; //0x0000
-	Vec4 Quat; //0x0010
-	Vec4 Translation; //0x0020
-}; //Size: 0x0020
-
-class QuatTransformArray
-{
-public:
-	class QuatTransform transform[98]; //0x0000
-}; //Size: 0x0C40
 
 class LinearTransform
 {
