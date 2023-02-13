@@ -47,7 +47,9 @@ namespace BF2VR {
                     }
 
                     OpenXRService::updateActions();
+                    OpenXRService::updatePoses();
                 }
+
 
                 // Get the color buffer from the screen
                 HRESULT hr = pInstance->GetBuffer(0, IID_PPV_ARGS(&pFrame));
@@ -130,8 +132,8 @@ namespace BF2VR {
 
     void DirectXService::unhookDirectX() {
 
-        MH_DisableHook(reinterpret_cast<LPVOID>(reinterpret_cast<DWORD64>(pPresentTarget)));
-        MH_RemoveHook(reinterpret_cast<LPVOID>(reinterpret_cast<DWORD64>(pPresentTarget)));
+        MH_DisableHook(reinterpret_cast<LPVOID>(pPresentTarget));
+        MH_RemoveHook(reinterpret_cast<LPVOID>(pPresentTarget));
 
         if (srvCreated)
         {

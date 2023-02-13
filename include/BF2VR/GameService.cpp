@@ -10,16 +10,14 @@ namespace BF2VR {
     __int64 GameService::cameraUpdateDetour(CameraObject* a1, CameraObject* a2)
     {
         if (a2 == pRenderView && OpenXRService::isVRReady) {
-            OpenXRService::updatePoses();
             a2->cameraTransform = cameraTransfrom;
         }
-
 
         return cameraUpdateOriginal(a1, a2);
     }
 
     // Function to set the view of the game camera
-    void GameService::updateCamera(Vec3 hmdLocation, Matrix4 hmdRot, float yaw, float pitch) {
+    void GameService::updateCamera(Vec3 hmdLocation, Matrix4 hmdMat, float yaw, float pitch) {
         GameRenderer* pGameRenderer = GameRenderer::GetInstance();
         if (!isValidPtr(pGameRenderer))
         {
@@ -36,19 +34,11 @@ namespace BF2VR {
             pSettings->forceFov = FOV;
         }
 
-        hmdRot.invert();
-
-        // Convert back to Matrix4x4
-        Matrix4x4 outputHeadMatrix;
-        outputHeadMatrix.x.x = hmdRot[0]; outputHeadMatrix.x.y = hmdRot[1]; outputHeadMatrix.x.z = hmdRot[2]; outputHeadMatrix.x.w = hmdRot[3];
-        outputHeadMatrix.y.x = hmdRot[4]; outputHeadMatrix.y.y = hmdRot[5]; outputHeadMatrix.y.z = hmdRot[6]; outputHeadMatrix.y.w = hmdRot[7];
-        outputHeadMatrix.z.x = hmdRot[8]; outputHeadMatrix.z.y = hmdRot[9]; outputHeadMatrix.z.z = hmdRot[10]; outputHeadMatrix.z.w = hmdRot[11];
-
         // Set location from HMD
-        outputHeadMatrix.o.x = hmdLocation.x;
-        outputHeadMatrix.o.y = hmdLocation.y;
-        outputHeadMatrix.o.z = hmdLocation.z;
-        outputHeadMatrix.o.w = 1;
+        hmdMat.o.x = hmdLocation.x;
+        hmdMat.o.y = hmdLocation.y;
+        hmdMat.o.z = hmdLocation.z;
+        hmdMat.o.w = 1;
 
         // Get some game members, validating pointers along the way
         GameContext* CurrentContext = GameContext::GetInstance();
@@ -76,10 +66,10 @@ namespace BF2VR {
 
         if (strcmp(levelname, "Levels/FrontEnd/FrontEnd") == 0)
         {
-            outputHeadMatrix.o.y -= 3.5;
+            hmdMat.o.y -= 3.5;
 
             // Update the transform that the CameraHook will use
-            cameraTransfrom = outputHeadMatrix;
+            cameraTransfrom = hmdMat;
         }
         else
         {
@@ -133,12 +123,12 @@ namespace BF2VR {
 
             InputService::useRight = inVehicle;
 
-            outputHeadMatrix.o.x += playerPosition.x;
-            outputHeadMatrix.o.y += playerPosition.y - heightOffset + 3;
-            outputHeadMatrix.o.z += playerPosition.z;
+            hmdMat.o.x += playerPosition.x;
+            hmdMat.o.y += playerPosition.y - heightOffset + 3;
+            hmdMat.o.z += playerPosition.z - 0.6f;
 
             // Update the transform that the CameraHook will use
-            cameraTransfrom = outputHeadMatrix;
+            cameraTransfrom = hmdMat;
 
             // Update the view angles
             // Check wich ViewAngle pointer is active. The signature of the active viewangle will start with 12 0xff bytes
@@ -225,7 +215,6 @@ namespace BF2VR {
     {
         __int64 toReturn = poseUpdateOriginal(a1, a2, a3, a4, a5);
 
-
         GameContext* CurrentContext = GameContext::GetInstance();
         if (!isValidPtr(CurrentContext)) {
             return toReturn;
@@ -253,74 +242,78 @@ namespace BF2VR {
             return toReturn;
         }
 
-        // Find bone index
-
-        AnimationSkeleton* skeleton = bones->skeleton;
-        if (!isValidPtr(bones)) {
-            warn("Could not find animation skeleton. 6dof hands will not work.");
+        BasicSkeleton skeleton = BasicSkeleton(bones);
+        if (!skeleton.valid)
+        {
+            warn("Could not find the skeleton. 6dof hands will not work.");
             return toReturn;
         }
-
-        SkeletonAsset* asset = skeleton->asset;
-        if (!isValidPtr(bones)) {
-            warn("Could not find skeleton asset. 6dof hands will not work.");
-            return toReturn;
-        }
+         
 
         for (boneState state : boneStates)
         {
-            int boneIndex = -1;
+            // Hide-only bones
+            if (state.location.x == -1)
+            {
+                Vec3 location;
+                Vec4 rotation;
+                Vec3 scale;
 
-            for (int i = 0; i < skeleton->boneCount; i++) {
-                if (strcmp(asset->boneNames[i], state.boneName) == 0)
+                // Hide bone
+                if (!skeleton.getBoneRelative(state.boneName, location, rotation, scale))
                 {
-                    boneIndex = i;
+                    warn(std::format("Bone {} could not be hidden.", state.boneName));
+                    continue;
                 }
+                if (!skeleton.poseBoneRelative(state.boneName, location, rotation, state.scale))
+                {
+                    warn(std::format("Bone {} could not be hidden.", state.boneName));
+                }
+                continue;
             }
 
-            if (boneIndex == -1)
+            if (!skeleton.poseBone(state.boneName, state.location, state.rotation, state.scale))
             {
-                warn("Bone not found by name. 6dof hands will not work.");
-                return toReturn;
+                warn(std::format("Bone {} could not be posed.", state.boneName));
             }
+        }
 
-            // Set vector
-            UpdatePoseResultData pose = bones->pose;
-            QuatTransformArray* transforms = pose.pArray;
-            if (!isValidPtr(bones)) {
-                warn("Could not find bone transform array. 6dof hands will not work.");
-                return toReturn;
-            }
+        // Fix 3rd person
+        Vec3 location;
+        Vec4 rotation;
+        Vec3 scale;
+        Vec3 noScale = Vec3(0, 0, 0);
+        if (!skeleton.getBoneRelative("Head", location, rotation, scale))
+        {
+            warn("Could not find head.");
+            return toReturn;
+        }
 
-            transforms->transform[boneIndex].Translation.x = state.translation.x;
-            //transforms->transform[boneIndex].Translation.y = state.translation.y;
-            //transforms->transform[boneIndex].Translation.z = state.translation.z;
+        // Hide head
+        if (!skeleton.poseBoneRelative("Head", location, rotation, noScale))
+        {
+            warn("Could not correct 3rd person.");
+        }
 
-            if(state.rotate)
-                transforms->transform[boneIndex].Quat = state.rotation;
-
-            if (!state.show)
-            {
-                transforms->transform[boneIndex].Scale = Vec4(0, 0, 0, 0);
-            }
+        if (!skeleton.poseBoneRelative("Camera3p_Rig", location, rotation, scale))
+        {
+            warn("Could not correct 3rd person.");
         }
 
         return toReturn;
     }
 
 
-    void GameService::updateBone(const char* boneName, Vec3 location, Vec4 rotation, bool show, bool rotate)
+    void GameService::updateBone(const char* boneName, Vec3 location, Vec4 rotation)
     {
+        // Check for existing entry
         for (int i = 0; i < boneStates.size(); i++)
         { 
             boneState state = boneStates.at(i);
             if (strcmp(state.boneName, boneName) == 0)
             {
-
-                state.translation = location;
+                state.location = location;
                 state.rotation = rotation;
-                state.show = show;
-                state.rotate = rotate;
 
                 boneStates.at(i) = state;
 
@@ -328,9 +321,27 @@ namespace BF2VR {
             }
         }
 
-        boneStates.push_back({ boneName, location, rotation, show });
+        boneStates.push_back({ boneName, location, rotation, Vec3(1, 1, 1) });
     }
 
+    void GameService::updateBone(const char* boneName, bool show)
+    {
+        // Check for existing entry
+        for (int i = 0; i < boneStates.size(); i++)
+        {
+            boneState state = boneStates.at(i);
+            if (strcmp(state.boneName, boneName) == 0)
+            {
+                state.scale = Vec3(0,0,0);
+
+                boneStates.at(i) = state;
+
+                return;
+            }
+        }
+
+        boneStates.push_back({ boneName, Vec3(-1, -1, -1), Vec4(-1, -1, -1, -1), Vec3(0, 0, 0)});
+    }
 
 
     bool GameService::enableHooks() {

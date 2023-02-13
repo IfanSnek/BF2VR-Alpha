@@ -7,7 +7,7 @@ namespace BF2VR {
 
 	class GameService {
 	public:
-		static inline Matrix4x4 cameraTransfrom;
+		static inline Matrix4 cameraTransfrom;
 		static inline void* pRenderView = NULL;
 		static inline Vec4 cameraPosition = { 0, 0, 0, 0 };
 		static inline char* level = nullptr;
@@ -17,7 +17,8 @@ namespace BF2VR {
 
 		static void updateCamera(Vec3 cameraLocation, Matrix4 cameraViewMatrix, float aimYaw, float aimPitch);
 
-		static void updateBone(const char* boneName, Vec3 location, Vec4 rotation, bool show = true, bool rotate = true);
+		static void updateBone(const char* boneName, Vec3 location = Vec3(0, 0, 0), Vec4 rotation = Vec4(0, 0, 0, 1));
+		static void updateBone(const char* boneName, bool show);
 
 		static bool enableHooks();
 
@@ -32,10 +33,9 @@ namespace BF2VR {
 		typedef struct boneState
 		{
 			const char* boneName;
-			Vec3 translation;
+			Vec3 location;
 			Vec4 rotation;
-			bool show;
-			bool rotate;
+			Vec3 scale;
 		} boneState;
 
 		static inline std::vector<boneState> boneStates;

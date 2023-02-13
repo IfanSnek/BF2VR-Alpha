@@ -4,6 +4,7 @@
 #include "Types.h"
 #include "../../third-party/minhook/MinHook.h"
 #include <fstream>
+#include <iostream>
 
 namespace BF2VR {
 
@@ -23,8 +24,6 @@ namespace BF2VR {
 	void success(std::string message);
 	void info(std::string message);
 	void deb(std::string message);
-	
-	bool isValidPtr(PVOID p);
 
 	void shutdown();
 
@@ -37,77 +36,6 @@ namespace BF2VR {
 	Vec3 eulerFromQuat(Vec4 q);
 	Vec4 quatFromEuler(Vec3 e);
 
-    // https://github.com/onra2/swbf2-internal/blob/master/swbf2%20onra2/Classes.h
-
-	struct typeInfoMemberResult {
-		void* pVTable;
-		const char* name;
-		DWORD offset;
-	};
-
-	inline std::vector<typeInfoMemberResult> typeInfoMemberResults;
-
-    template <class T = void*>
-    T GetClassFromName(void* addr, const char* name, SIZE_T classSize = 0x2000) {
-
-        for (typeInfoMemberResult& result : typeInfoMemberResults) {
-            if (result.pVTable == addr) {
-                if (result.name == name) {
-                    return *(T*)((DWORD64)addr + result.offset);
-                }
-            }
-        }
-        
-        const byte INSTR_LEA = 0x48;
-        const byte INSTR_RET = 0xc3;
-        const byte INSTR_JMP = 0xe9;
-        const DWORD64 BASE_ADDRESS = 0x140000000;
-        const DWORD64 MAX_ADDRESS = 0x14fffffff;
-
-		DWORD offset = 0;
-		DWORD lastOffset = 0;
-		while (offset < classSize) {
-			offset += 8;
-			if (!isValidPtr((void*)((DWORD64)addr + offset))) continue;
-			void* czech = *(void**)((DWORD64)addr + offset);
-			if (!isValidPtr(czech)) continue;
-			if (!isValidPtr(*(void**)czech)) continue; // vtable
-			if (!isValidPtr(**(void***)czech)) continue; // virtual 1;
-			void* pGetType = **(DWORD64***)czech;
-			if ((DWORD64)pGetType < BASE_ADDRESS || (DWORD64)pGetType > MAX_ADDRESS) continue;
-
-			if (*(byte*)pGetType == INSTR_JMP || *(byte*)pGetType == INSTR_LEA) {
-				void* pTypeInfo = nullptr;
-				if (*(byte*)pGetType == INSTR_JMP) {
-					//std::cout << std::hex << "rel:\t" << *(int32_t*)((DWORD64)pGetType + 1) << "\tRIP:\t" << (DWORD64)pGetType + 5 << std::endl;
-					pGetType = (void*)(*(int32_t*)((DWORD64)pGetType + 1) + (DWORD64)pGetType + 5);
-				}
-				if (*(byte*)pGetType == INSTR_LEA) {
-					if (*(byte*)((DWORD64)pGetType + 7) != INSTR_RET) continue;
-					pTypeInfo = (void*)(*(int32_t*)((DWORD64)pGetType + 3) + (DWORD64)pGetType + 7);
-				}
-				else continue;
-				if (!isValidPtr(pTypeInfo)) continue;
-				void* pMemberInfo = *(void**)pTypeInfo;
-				if (!isValidPtr(pMemberInfo)) continue;
-				char* m_name = *(char**)pMemberInfo;
-				if (!isValidPtr(m_name)) continue;
-				if ((DWORD64)pTypeInfo > BASE_ADDRESS && (DWORD64)pTypeInfo < MAX_ADDRESS) {
-					if (strcmp(m_name, name) == 0) {
-						typeInfoMemberResult result;
-						result.name = name;
-						result.offset = offset;
-						result.pVTable = addr;
-						typeInfoMemberResults.push_back(result);
-                        return *(T*)((DWORD64)addr + offset);
-                    }
-
-                    lastOffset = offset;
-                }
-            }
-        }
-        return nullptr;
-    }
 
 	// Config settings
 

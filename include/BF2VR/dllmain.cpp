@@ -37,9 +37,9 @@ DWORD __stdcall mainThread(HMODULE module)
 
     RECT desktop;
     GetWindowRect(ownWindow, &desktop);
-    MoveWindow(ownWindow, 0, 0, desktop.bottom * RATIO, desktop.bottom, TRUE);
+    MoveWindow(ownWindow, 0, 0, (int)(desktop.bottom * RATIO), desktop.bottom, TRUE);
 
-    OpenXRService::eyeWidth = desktop.bottom * RATIO;
+    OpenXRService::eyeWidth = (int)(desktop.bottom * RATIO);
     OpenXRService::eyeHeight = desktop.bottom;
 
 
@@ -61,6 +61,7 @@ DWORD __stdcall mainThread(HMODULE module)
     if (!DirectXService::hookDirectX(ownWindow)) {
         error("Unable to Hook DirectX.");
         shutdownNoHooks();
+        return 1;
     }
     else {
         success("Hooked DirectX.");
@@ -71,6 +72,7 @@ DWORD __stdcall mainThread(HMODULE module)
         error("Unable to start ViGEm.");
         DirectXService::unhookDirectX();
         shutdownNoHooks();
+        return 1;
     }
     else {
         success("Started ViGEm.");
@@ -80,6 +82,7 @@ DWORD __stdcall mainThread(HMODULE module)
     if (!GameService::enableHooks()) {
         error("Unable to Hook the BF2 Camera.");
         shutdown();
+        return 1;
     }
     else {
         success("Hooked the BF2 Camera.");
@@ -89,10 +92,10 @@ DWORD __stdcall mainThread(HMODULE module)
 
 
     for (;;) {
-
+        Sleep(10);
         if (GetAsyncKeyState(VK_END)) {
             shutdown();
-            return 1;
+            return 0;
         }
     }
     return 0;

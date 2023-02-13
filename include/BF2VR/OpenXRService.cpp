@@ -754,52 +754,53 @@ namespace BF2VR {
             doReconfig = false;
         }
 
+        // Get the headset transform
+
         const auto [q1, q2, q3, q0] = xrViews.at(CurrentEye).pose.orientation;
         const auto [lx, ly, lz] = xrViews.at(CurrentEye).pose.position;
         FOV = (xrViews.at(CurrentEye).fov.angleUp - xrViews.at(CurrentEye).fov.angleDown) * 57.2958f * RATIO;
 
-        Vec3 HMDPosition;
+        Vec3 HMDLoc;
+        HMDLoc.x = lx;
+        HMDLoc.y = ly;
+        HMDLoc.z = lz;
 
-        float scale = 1.f;
+        Vec4 HMDQuat;
+        HMDQuat.w = q0;
+        HMDQuat.x = q1;
+        HMDQuat.y = q2;
+        HMDQuat.z = q3;
+        Vec3 HMDEuler = eulerFromQuat(HMDQuat);
 
-        HMDPosition.x = lx * scale;
-        HMDPosition.y = ly * scale;
-        HMDPosition.z = lz * scale;
+        Matrix4 HMDMat;
 
-        Matrix4 HMDPose;
+        HMDMat.x.x = 2 * (q0 * q0 + q1 * q1) - 1;
+        HMDMat.y.x = 2 * (q1 * q2 - q0 * q3);
+        HMDMat.z.x = 2 * (q1 * q3 + q0 * q2);
+        HMDMat.o.x = 0;
 
-        HMDPose[0] = 2 * (q0 * q0 + q1 * q1) - 1;
-        HMDPose[1] = 2 * (q1 * q2 - q0 * q3);
-        HMDPose[2] = 2 * (q1 * q3 + q0 * q2);
-        HMDPose[3] = 0;
+        HMDMat.x.y = 2 * (q1 * q2 + q0 * q3);
+        HMDMat.y.y = 2 * (q0 * q0 + q2 * q2) - 1;
+        HMDMat.z.y = 2 * (q2 * q3 - q0 * q1);
+        HMDMat.o.y = 0;
 
-        HMDPose[4] = 2 * (q1 * q2 + q0 * q3);
-        HMDPose[5] = 2 * (q0 * q0 + q2 * q2) - 1;
-        HMDPose[6] = 2 * (q2 * q3 - q0 * q1);
-        HMDPose[7] = 0;
+        HMDMat.x.z = 2 * (q1 * q3 - q0 * q2);
+        HMDMat.y.z = 2 * (q2 * q3 + q0 * q1);
+        HMDMat.z.z = 2 * (q0 * q0 + q3 * q3) - 1;
+        HMDMat.o.z = 0;
 
-        HMDPose[8] = 2 * (q1 * q3 - q0 * q2);
-        HMDPose[9] = 2 * (q2 * q3 + q0 * q1);
-        HMDPose[10] = 2 * (q0 * q0 + q3 * q3) - 1;
-        HMDPose[11] = 0;
+        HMDMat.x.w = 0;
+        HMDMat.y.w = 0;
+        HMDMat.x.w = 0;
+        HMDMat.o.w = 1;
 
-        HMDPose[12] = 0;
-        HMDPose[13] = 0;
-        HMDPose[14] = 0;
-        HMDPose[15] = 1;
+        // Get the right hand transform
 
         const auto [hq1, hq2, hq3, hq0] = handLocations[1].pose.orientation;
         const auto [hlx, hly, hlz] = handLocations[1].pose.position;
 
-        Vec3 aimLoc;    // Convert to FB axis
-        aimLoc.x = hly;
-        aimLoc.y = hlx + TP_OFFSET;
-        aimLoc.z = -hlz;
 
         Vec4 hudQuat;
-        Vec4 aimQuat;
-        Vec4 lookQuat;
-
         hudQuat.w = q0;
         hudQuat.x = q1;
         hudQuat.y = q2;
@@ -809,9 +810,7 @@ namespace BF2VR {
         {
 
             if (!isFiring)
-            {
                 isFiring = true;
-            }
         }
 
         if (isFiring)
@@ -826,32 +825,48 @@ namespace BF2VR {
                 hudQuat.z = hq3;
             }
         }
+        Vec3 hudEuler = eulerFromQuat(hudQuat);
 
-        lookQuat.w = q0;
-        lookQuat.x = q1;
-        lookQuat.y = q2;
-        lookQuat.z = q3;
 
+        Vec3 aimLoc;
+        aimLoc.x = hlx;
+        aimLoc.y = hly;
+        aimLoc.z = hlz;
+
+        Vec4 aimQuat;
         aimQuat.w = hq0;
         aimQuat.x = hq1;
         aimQuat.y = hq2;
         aimQuat.z = hq3;
-
-
-        Vec3 hudEuler = eulerFromQuat(hudQuat);
         Vec3 aimEuler = eulerFromQuat(aimQuat);
-        Vec3 lookEuler = eulerFromQuat(lookQuat);
 
         float yaw = -hudEuler.x;
         float pitch = hudEuler.z;
 
-        GameService::updateCamera(HMDPosition, HMDPose, yaw, pitch);
-        GameService::updateBone("Wep_Root", aimLoc, aimQuat, true, false);
-        //GameService::updateBone("Head", HMDPosition, hudQuat, false);
+        // Calculate the relative tranfrom for the right hand
+        //Matrix4 rightHandMat = calculateRelativeTransform(HMDLoc, HMDQuat, aimLoc, aimQuat);
+        //rightHandMat.decompose(aimLoc, aimQuat);
+
+        aimLoc = HMDLoc - aimLoc;
+
+        Vec3 fbAimLoc;
+        fbAimLoc.x = aimLoc.y;
+        fbAimLoc.y = aimLoc.x - 0.4f;
+        fbAimLoc.z = -aimLoc.z;
+
+        Vec4 fbAimQuat;
+        aimQuat = aimQuat.rotate(Vec4(0, 0, (float)sin(45), (float)cos(45)));
+        fbAimQuat.x = aimQuat.y;
+        fbAimQuat.y = aimQuat.x;
+        fbAimQuat.z = -aimQuat.z;
+        fbAimQuat.w = aimQuat.w;
+        
+        GameService::updateCamera(HMDLoc, HMDMat, yaw, pitch);
+        GameService::updateBone("Wep_Root", fbAimLoc, fbAimQuat);
 
         float speed = 1.3f;
-        DirectXService::crosshairX = (-aimEuler.x + lookEuler.x) * speed;
-        DirectXService::crosshairY = (aimEuler.z - lookEuler.z) * speed;
+        DirectXService::crosshairX = (-aimEuler.x + HMDEuler.x) * speed;
+        DirectXService::crosshairY = (aimEuler.z - HMDEuler.z) * speed;
 
         if (!(grabValue[1].currentState > 0.5f) && isFiring)
         {

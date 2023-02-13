@@ -1,7 +1,6 @@
 #pragma once
 #include <windows.h>
 #include <stdint.h>
-#include "Matrices.h"
 
 // A backup of the old classes
 
@@ -38,8 +37,8 @@ struct Vec4 {
 	}
 };
 
-// a Matrix4x4, just 4 vector4s
-struct Matrix4x4 {
+// a Matrix4, just 4 vector4s
+struct Matrix4 {
 	Vec4 x;
 	Vec4 y;
 	Vec4 z;
@@ -50,7 +49,7 @@ struct Matrix4x4 {
 
 class CameraObject {
 public:
-	Matrix4x4 cameraTransform;
+	Matrix4 cameraTransform;
 };
 
 class GameRenderer {
@@ -79,7 +78,7 @@ public:
 // RenderView structure, where we can read the camera transform
 class RenderView {
 public:
-	Matrix4x4 transform;
+	Matrix4 transform;
 };
 
 class UISettings {

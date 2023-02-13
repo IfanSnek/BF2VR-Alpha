@@ -44,11 +44,6 @@ namespace BF2VR {
 
 	private:
 
-		static inline float HALFPI = 1.570796f;
-		static inline float fixRot(float x) { return (x > HALFPI) ? (-HALFPI + (x - HALFPI)) : ((x < HALFPI) ? (HALFPI + (x + HALFPI)) : x); }
-
-		static inline float TP_OFFSET = .5f;
-
 		// CreateXRInstanceWithExtensions
 		static inline XrEnvironmentBlendMode xrBlend = {};
 

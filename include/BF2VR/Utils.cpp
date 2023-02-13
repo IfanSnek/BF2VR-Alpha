@@ -102,9 +102,6 @@ namespace BF2VR
         logFile << message << std::endl;
     }
 
-    // Check if a pointer is legit
-    bool isValidPtr(PVOID p) { return (p >= (PVOID)0x10000) && (p < ((PVOID)0x000F000000000000)) && p != nullptr &&!IsBadReadPtr(p, sizeof(PVOID)); }
-
     // Shutdown and eject the mod. Currently only works before DirextX gets hooked.
     void shutdown() {
         OpenXRService::isVRReady = false;
@@ -224,7 +221,7 @@ namespace BF2VR
     {
         Vec3 v;
 
-        double test = q.x * q.y + q.z * q.w;
+        float test = q.x * q.y + q.z * q.w;
         if (test > 0.499)
         { // singularity at north pole
             v.x = 2 * atan2(q.x, q.w); // heading
@@ -239,9 +236,9 @@ namespace BF2VR
             v.z = 0; // bank
             return v;
         }
-        double sqx = q.x * q.x;
-        double sqy = q.y * q.y;
-        double sqz = q.z * q.z;
+        float sqx = q.x * q.x;
+        float sqy = q.y * q.y;
+        float sqz = q.z * q.z;
         v.x = atan2(2 * q.y * q.w - 2 * q.x * q.z, 1 - 2 * sqy - 2 * sqz); // heading
         v.y = asin(2 * test); // attitude
         v.z = atan2(2 * q.x * q.w - 2 * q.y * q.z, 1 - 2 * sqx - 2 * sqz); // bank
