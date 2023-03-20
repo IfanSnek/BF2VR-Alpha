@@ -798,7 +798,8 @@ namespace BF2VR {
         const auto [lx, ly, lz] = xrViews.at(CurrentEye).pose.position;
         FOV = (xrViews.at(CurrentEye).fov.angleUp - xrViews.at(CurrentEye).fov.angleDown) * 57.2958f * RATIO;
 
-        float size = 2.f;
+        // Transform scale
+        float size = 3.f;
 
         Vec3 HMDLoc;
         HMDLoc.x = lx;
@@ -895,8 +896,9 @@ namespace BF2VR {
         fbAimLoc.y = relAimLoc.x;
         fbAimLoc.z = -relAimLoc.z;
 
-        float handSpeed = 0.5f;
+        float handSpeed = 0.1f;
         fbAimLoc = fbAimLoc * Vec3(handSpeed, handSpeed, handSpeed);
+
 
         Vec4 fbAimQuat;
         fbAimQuat.x = aimQuat.y;
@@ -905,7 +907,6 @@ namespace BF2VR {
         fbAimQuat.w = aimQuat.w;
         
         GameService::updateCamera(HMDLoc, HMDMat, yaw, pitch);
-        //GameService::updateBone("Trajectory", Vec3(0, 0, 0), HMDQuat);
         GameService::updateBone("Wep_Root", fbAimLoc, Vec4(0, 0, 0, 1));
 
         DirectXService::crosshairX = (-aimEuler.y + HMDEuler.y) * 1.3f;

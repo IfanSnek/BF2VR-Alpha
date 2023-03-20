@@ -451,7 +451,8 @@ public:
 			return false;
 
 		transfrom->Translation = Vec4(location.x, location.y, location.z, 0);
-		transfrom->Quat = rotation;
+		if (rotation.x != 0 && rotation.y != 0 && rotation.z != 0 && rotation.w != 1)
+			transfrom->Quat = rotation;
 		transfrom->Scale = Vec4(scale.x, scale.y, scale.z, 0);
 		
 		return true;
@@ -465,7 +466,8 @@ public:
 			return false;
 
 		transfrom->Translation = transfrom->Translation + Vec4(location.x, location.y, location.z, 0);
-		transfrom->Quat = transfrom->Quat * rotation;
+		if (rotation.x != 0 && rotation.y != 0 && rotation.z != 0 && rotation.w != 1)
+			transfrom->Quat = rotation;
 		transfrom->Scale = Vec4(scale.x, scale.y, scale.z, 0);
 
 		return true;
