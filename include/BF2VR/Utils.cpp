@@ -9,6 +9,7 @@ namespace BF2VR
 {
     // Print to console and a file
     void log(std::string message) {
+        logFile << message << std::endl;
         HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
         SetConsoleTextAttribute(hConsole, FOREGROUND_INTENSITY);
 
@@ -16,9 +17,9 @@ namespace BF2VR
         std::cout << "[BF2VR]   ";
 
         std::cout << message << std::endl;
-        logFile << message << std::endl;
     }
     void error(std::string message) {
+        logFile << message << std::endl;
         HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
         SetConsoleTextAttribute(hConsole, FOREGROUND_INTENSITY);
 
@@ -28,7 +29,6 @@ namespace BF2VR
         SetConsoleTextAttribute(hConsole,
             FOREGROUND_RED);
         std::cout << message << std::endl;
-        logFile << message << std::endl;
     }
     void warn(std::string message) {
 
@@ -55,6 +55,7 @@ namespace BF2VR
         else {
             warnCount = 0;
         }
+        logFile << message << std::endl;
 
         HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
         SetConsoleTextAttribute(hConsole, FOREGROUND_INTENSITY);
@@ -64,11 +65,11 @@ namespace BF2VR
         SetConsoleTextAttribute(hConsole,
             FOREGROUND_RED | FOREGROUND_GREEN);
         std::cout << message << std::endl;
-        logFile << message << std::endl;
 
         lastWarn = message;
     }
     void success(std::string message) {
+        logFile << message << std::endl;
         HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
         SetConsoleTextAttribute(hConsole, FOREGROUND_INTENSITY);
 
@@ -77,9 +78,9 @@ namespace BF2VR
         SetConsoleTextAttribute(hConsole,
             FOREGROUND_GREEN);
         std::cout << message << std::endl;
-        logFile << message << std::endl;
     }
     void info(std::string message) {
+        logFile << message << std::endl;
         HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
         SetConsoleTextAttribute(hConsole, FOREGROUND_INTENSITY);
 
@@ -88,9 +89,9 @@ namespace BF2VR
         SetConsoleTextAttribute(hConsole,
             FOREGROUND_BLUE | FOREGROUND_INTENSITY);
         std::cout << message << std::endl;
-        logFile << message << std::endl;
     }
     void deb(std::string message) {
+        logFile << message << std::endl;
         HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
         SetConsoleTextAttribute(hConsole, FOREGROUND_INTENSITY);
 
@@ -99,15 +100,21 @@ namespace BF2VR
         SetConsoleTextAttribute(hConsole,
             FOREGROUND_RED | FOREGROUND_BLUE);
         std::cout << message << std::endl;
-        logFile << message << std::endl;
     }
 
-    // Shutdown and eject the mod. Currently only works before DirextX gets hooked.
+    // Shutdown and eject the mod.
     void shutdown() {
+
+        log("Ending VR");
+        OpenXRService::shouldStop = true;
+        while (!OpenXRService::stopping) {
+            Sleep(10);
+        }
+        
+        OpenXRService::endXR();
+
         OpenXRService::isVRReady = false;
         DirectXService::shouldPresent = false;
-
-        Sleep(100); // Let a few frames render for anyncronous present
 
         log("Unhooking Camera");
         MH_DisableHook((LPVOID)OFFSETCAMERA);
@@ -116,10 +123,6 @@ namespace BF2VR
         log("Unhooking Pose");
         MH_DisableHook((LPVOID)OFFSETPOSE);
         MH_RemoveHook((LPVOID)OFFSETPOSE);
-
-        log("Ending VR");
-        OpenXRService::endXR();
-        Sleep(100);
 
         log("Unhooking DirectX");
         DirectXService::unhookDirectX();
@@ -239,8 +242,8 @@ namespace BF2VR
         float sqx = q.x * q.x;
         float sqy = q.y * q.y;
         float sqz = q.z * q.z;
-        v.x = atan2(2 * q.y * q.w - 2 * q.x * q.z, 1 - 2 * sqy - 2 * sqz); // heading
-        v.y = asin(2 * test); // attitude
+        v.y = atan2(2 * q.y * q.w - 2 * q.x * q.z, 1 - 2 * sqy - 2 * sqz); // heading
+        v.x = asin(2 * test); // attitude
         v.z = atan2(2 * q.x * q.w - 2 * q.y * q.z, 1 - 2 * sqx - 2 * sqz); // bank
         return v;
     }
@@ -248,7 +251,7 @@ namespace BF2VR
 
     Vec4 quatFromEuler(Vec3 e)
     {
-        auto [yaw, pitch, roll] = e;
+        auto [pitch, yaw, roll] = e;
         float qx = sin(roll / 2) * cos(pitch / 2) * cos(yaw / 2) - cos(roll / 2) * sin(pitch / 2) * sin(yaw / 2);
         float qy = cos(roll / 2) * sin(pitch / 2) * cos(yaw / 2) + sin(roll / 2) * cos(pitch / 2) * sin(yaw / 2);
         float qz = cos(roll / 2) * cos(pitch / 2) * sin(yaw / 2) - sin(roll / 2) * sin(pitch / 2) * cos(yaw / 2);

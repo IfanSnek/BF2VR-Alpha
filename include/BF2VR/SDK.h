@@ -371,6 +371,7 @@ struct Bone
 {
 	int id = 0;
 	QuatTransform* transform = new QuatTransform;
+	QuatTransform* originalTransfrom = new QuatTransform;
 	std::vector<Bone*> children;
 };
 
@@ -449,9 +450,9 @@ public:
 		if (!boneRelative(name, &transfrom))
 			return false;
 
-		transfrom->Translation = Vec4(location.x, location.y, location.z, 1);
+		transfrom->Translation = Vec4(location.x, location.y, location.z, 0);
 		transfrom->Quat = rotation;
-		transfrom->Scale = Vec4(scale.x, scale.y, scale.z, 1);
+		transfrom->Scale = Vec4(scale.x, scale.y, scale.z, 0);
 		
 		return true;
 	}
@@ -463,9 +464,9 @@ public:
 		if (!boneRelative(boneId, &transfrom))
 			return false;
 
-		transfrom->Translation = Vec4(location.x, location.y, location.z, 1);
-		transfrom->Quat = rotation;
-		transfrom->Scale = Vec4(scale.x, scale.y, scale.z, 1);
+		transfrom->Translation = transfrom->Translation + Vec4(location.x, location.y, location.z, 0);
+		transfrom->Quat = transfrom->Quat * rotation;
+		transfrom->Scale = Vec4(scale.x, scale.y, scale.z, 0);
 
 		return true;
 	}
@@ -484,10 +485,22 @@ public:
 		return true;
 	}
 
-	bool poseBoneAbsolute(const char* name, Vec3 location, Vec4 rotation, Vec3 scale)
+	// Pose a bone in absolute local space.
+
+	bool poseBone(const char* name, Vec3 location, Vec4 rotation, Vec3 scale)
 	{
 		if (!updateValidity())
 			return false;
+
+		if (strcmp(name, "Trajectory") == 0)
+		{
+			Vec3 rootLocation;
+			Vec4 rootRotation;
+			Vec3 rootScale;
+			if (!getBoneRelative("Trajectory", rootLocation, rootRotation, rootScale))
+				return false;
+			return poseBoneRelative("Trajectory", rootLocation, rotation, rootScale);
+		}
 
 		int boneId = boneIdFromName(name);
 		if (boneId == -1)
@@ -497,15 +510,12 @@ public:
 		if(!recursiveFindBone(boneId, indices))
 			return false;
 
-		Bone* bone = hips;
+		Bone* bone = root;
 
-		QuatTransform* transfrom = nullptr;
-		if (!boneRelative("Hips", &transfrom))
-			return false;
+		Vec4 totalQuat = Vec4(0, 0, 0, 1);
+		Vec3 totalLoc = Vec3(0,0,0);
 
-		Vec3 totalLoc = transfrom->Translation.dropW();
-		Vec4 totalRot = transfrom->Quat;
-		Vec3 totalScale = transfrom->Scale.dropW();
+		return poseBoneRelative(boneId, location, rotation, scale);
 
 		for (int index : indices)
 		{
@@ -513,121 +523,48 @@ public:
 
 			if (bone->id == boneId)
 			{
-
-				poseBoneRelative(boneId, totalLoc + location, totalRot * rotation, scale * totalScale);
-				return true;
+				return poseBoneRelative(boneId, location + totalLoc, totalQuat * rotation, scale);
 			}
 
-			if (!boneRelative(name, &transfrom))
-				return false;
-
-			totalLoc = totalLoc + transfrom->Translation.dropW();
-			totalRot = totalRot * transfrom->Quat;
-			totalScale = totalScale * transfrom->Scale.dropW();
+			totalQuat = totalQuat * (Vec4(1, 1, 1, 1) / bone->originalTransfrom->Quat);
+			totalLoc = totalLoc - bone->originalTransfrom->Translation.dropW();
 
 		}
 
 		return false;
-	}
-
-	bool poseBone(const char* name, Vec3 &location, Vec4 &rotation, Vec3 &scale)
-	{
-		if (!updateValidity())
-			return false;
-
-		int boneId = boneIdFromName(name);
-		if (boneId == -1)
-			return false;
-
-		return recursiveIK(hips, boneId, location, rotation, scale);
-
 	}
 
 private:
-
-	bool recursiveIK(Bone* bone, int boneId, Vec3 &location, Vec4 &rotation, Vec3 &scale)
-	{
-		//std::cout << bone->id << std::endl;
-		//std::cout << bone->children.size() << std::endl << std::endl;
-
-		if (!updateValidity())
-			return false;
-
-		if (bone->id == boneId)
-		{
-			return poseBoneRelative(boneId, location, rotation, scale);;
-		}
-
-		for (Bone* child : bone->children)
-		{
-			if (recursiveIK(child, boneId, location, rotation, scale))
-				return true;
-
-			if(child->id == boneId)
-			{
-				QuatTransform inverseChildTransform;
-				inverseChildTransform.Translation.x = -child->transform->Translation.x;
-				inverseChildTransform.Translation.y = -child->transform->Translation.y;
-				inverseChildTransform.Translation.z = -child->transform->Translation.z;
-
-				inverseChildTransform.Quat = child->transform->Quat.conjugate();
-
-				inverseChildTransform.Scale = Vec4(1.0f / child->transform->Scale.x, 1.0f / child->transform->Scale.y, 1.0f / child->transform->Scale.z, 1.0f);
-
-				QuatTransform worldTransform;
-				worldTransform.Translation = Vec4(location.x, location.y, location.z, 1.0);;
-				worldTransform.Quat = rotation;
-				worldTransform.Scale = Vec4(scale.x, scale.y, scale.z, 1.0);
-
-				QuatTransform parentTransform = worldTransform;
-
-				parentTransform.Translation.x *= inverseChildTransform.Translation.x;
-				parentTransform.Translation.y *= inverseChildTransform.Translation.y;
-				parentTransform.Translation.z *= inverseChildTransform.Translation.z;
-
-				parentTransform.Quat.x *= inverseChildTransform.Quat.x;
-				parentTransform.Quat.y *= inverseChildTransform.Quat.y;
-				parentTransform.Quat.z *= inverseChildTransform.Quat.z;
-				parentTransform.Quat.w *= inverseChildTransform.Quat.w;
-
-				parentTransform.Scale.x *= inverseChildTransform.Scale.x;
-				parentTransform.Scale.y *= inverseChildTransform.Scale.y;
-				parentTransform.Scale.z *= inverseChildTransform.Scale.z;
-
-				return poseBoneRelative(bone->id, parentTransform.Translation.dropW(), parentTransform.Quat, parentTransform.Scale.dropW());
-			}
-		}
-
-		return false;
-	}
-
-	bool recursiveFindBone(int id, std::vector<int> &indices)
+	bool recursiveFindBone(int id, std::vector<int> &indices, int depth = 0)
 	{
 
 		// Indices is like directions through the skeleton. Find the latest turn
-		Bone* bone = hips;
+		Bone* bone = root;
 		for (int index : indices)
 		{
-			bone = bone->children[index];
+			bone = bone->children.at(index);
 		}
 
-		indices.push_back(-1);
+		indices.push_back(0);
 		for (Bone* child : bone->children)
 		{
-			indices.at(indices.size() - 1) += 1;
-
-			if (child->id = id)
+			if (child->id == id)
 			{
 				return true;
 			}
 
-			recursiveFindBone(id, indices);
+			if (recursiveFindBone(id, indices, depth + 1))
+				return true;
+			else if (indices.size() - 1 > depth)
+			{
+				// Trim scanned hiarches that went beyond curretn depth
+				indices.erase(indices.begin() + depth + 1, indices.end());
+			}
+
+			indices.at(depth) += 1;
 		}
 
-		if (indices.at(indices.size() - 1) == -1)
-		{
-			return false; // No matches
-		}
+		return false;
 	}
 
 	bool addBone(const char* name, Bone* outBone, Bone* parent)
@@ -642,6 +579,8 @@ private:
 		outBone->id = boneId;
 		if (!boneRelative(name, &outBone->transform))
 			return false;
+		if (!boneRelative(name, &outBone->originalTransfrom))
+			return false;
 
 		parent->children.push_back(outBone);
 
@@ -652,31 +591,21 @@ private:
 		if (!updateValidity())
 			return false;
 
-		int hipsId = boneIdFromName("Hips");
-		if (hipsId == -1)
+		int rootId = boneIdFromName("AITrajectory");
+		if (rootId == -1)
 			return false;
 
-		hips->id = hipsId;
-		boneRelative("Hips", &hips->transform);
-
-		// Ik hands
-
-		int lhIkId = boneIdFromName("IK_Joint_LeftHand");
-		if (lhIkId == -1)
+		root->id = rootId;
+		if (!boneRelative("AITrajectory", &root->transform))
 			return false;
-
-		leftHandIK->id = lhIkId;
-		boneRelative("IK_Joint_LeftHand", &leftHandIK->transform);
-
-
-		int rgIkId = boneIdFromName("IK_Joint_RightHand");
-		if (rgIkId == -1)
+		if (!boneRelative("AITrajectory", &root->originalTransfrom))
 			return false;
-
-		rightHandIK->id = rgIkId;
-		boneRelative("IK_Joint_RightHand", &rightHandIK->transform);
 
 		// Fill in children
+
+		Bone* hips = new Bone;
+		if (!addBone("Hips", hips, root))
+			return false;
 
 		Bone* spine = new Bone;
 		if (!addBone("Spine", spine, hips))
@@ -743,10 +672,7 @@ private:
 		return valid;
 	}
 
-	Bone* hips = new Bone;
-
-	Bone* rightHandIK = new Bone;;
-	Bone* leftHandIK = new Bone;;
+	Bone* root = new Bone;
 
 	ClientBoneCollisionComponent* component = nullptr;
 	AnimationSkeleton* animationSkeleton = nullptr;

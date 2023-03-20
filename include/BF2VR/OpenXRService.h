@@ -32,6 +32,9 @@ namespace BF2VR {
 		static inline bool showUI = true;
 		static inline bool isPressingMenu = false;
 
+		static inline bool shouldStop = false;
+		static inline bool stopping = false;
+
 		static bool createXRInstanceWithExtensions();
 		static bool beginXRSession(ID3D11Device* pDevice);
 		static bool prepareActions();

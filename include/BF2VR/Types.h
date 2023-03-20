@@ -26,11 +26,12 @@ struct Vec3 {
 
     Vec3 operator-(Vec3 v2)
     {
-        v2.x -= x;
-        v2.y -= y;
-        v2.z -= z;
+        Vec3 v1 = Vec3(x, y, z);
+        v1.x -= v2.x;
+        v1.y -= v2.y;
+        v1.z -= v2.z;
 
-        return v2;
+        return v1;
     }
 
     Vec3 normalize() {
@@ -58,10 +59,32 @@ struct Vec4 {
 
     Vec4 operator*(Vec4 v2)
     {
-        v2.x *= x;
-        v2.y *= y;
-        v2.z *= z;
-        v2.w *= w;
+        Vec4 v1 = Vec4(x, y, z, w);
+        v1.x *= v2.x;
+        v1.y *= v2.y;
+        v1.z *= v2.z;
+        v1.w *= v2.w;
+
+        return v1;
+    }
+
+    Vec4 operator/(Vec4 v2)
+    {
+        Vec4 v1 = Vec4(x, y, z, w);
+        v1.x /= v2.x;
+        v1.y /= v2.y;
+        v1.z /= v2.z;
+        v1.w /= v2.w;
+
+        return v1;
+    }
+
+    Vec4 operator+(Vec4 v2)
+    {
+        v2.x += x;
+        v2.y += y;
+        v2.z += z;
+        v2.w += w;
 
         return v2;
     }
@@ -83,6 +106,7 @@ struct Vec4 {
 
     Vec4 rotate(Vec4 quat)
     {
+        return Vec4(x, y, z, w) * quat;
         Vec4 result;
         result.w = -x * quat.x - y * quat.y - z * quat.z + w * quat.w;
         result.x = x * quat.w + y * quat.z - z * quat.y + w * quat.x;
@@ -91,6 +115,26 @@ struct Vec4 {
         return result;
     }
 };
+
+static inline Vec3 rotateAround(Vec3 point, Vec3 pivot, float rad)
+{
+    Vec3 out = Vec3(point);
+
+    out.x = pivot.x + (cos(rad) * (point.x - pivot.x)) - (sin(rad) * (point.z - pivot.z));
+    out.z = pivot.z + (sin(rad) * (point.x - pivot.x)) + (cos(rad) * (point.z - pivot.z));
+
+    return out;
+}
+
+static inline Vec4 appendW(Vec3 v2, float w = 0.f)
+{
+    Vec4 v1;
+    v1.x = v2.x;
+    v1.y = v2.y;
+    v1.z = v2.z;
+    v1.w = w;
+    return v1;
+}
 
 struct Matrix4 {
     Vec4 x;
@@ -133,43 +177,3 @@ struct Matrix4 {
         loc = { o.x, o.y, o.z };
     }
 };
-
-static inline Matrix4 calculateRelativeTransform(Vec3& positionA, Vec4& rotationA,
-    Vec3& positionB, Vec4& rotationB) {
-    // Calculate the translation component
-    Vec3 translation = { positionB.x - positionA.x,
-                        positionB.y - positionA.y,
-                        positionB.z - positionA.z };
-
-    // Calculate the rot component
-    Vec3 forward = translation.normalize();
-    Vec3 up = { 0, 1, 0 };
-    Vec3 right = forward.cross(up).normalize();
-    up = right.cross(forward).normalize();;
-    float rot[9] = { right.x, up.x, -forward.x,
-                           right.y, up.y, -forward.y,
-                           right.z, up.z, -forward.z };
-
-
-    // Combine the translation and rot into a single 4x4 transform matrix
-    Matrix4 transform;
-
-    transform.x.x = rot[0];
-    transform.x.y = rot[1];
-    transform.x.z = rot[2];
-    transform.x.w = 0;
-    transform.y.z = rot[3];
-    transform.y.y = rot[4];
-    transform.y.z = rot[5];
-    transform.y.w = 0;
-    transform.z.x = rot[6];
-    transform.z.y = rot[7];
-    transform.z.z = rot[8];
-    transform.z.w = 0;
-    transform.o.x = translation.x;
-    transform.o.y = translation.y;
-    transform.o.z = translation.z;
-    transform.o.w = 1;
-
-    return transform;
-}

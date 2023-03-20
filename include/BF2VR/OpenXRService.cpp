@@ -486,6 +486,40 @@ namespace BF2VR {
 
     bool OpenXRService::beginFrameAndGetVectors(Vec3& Loc, Vec4& Rot, Matrix4 outMatrix)
     {
+        // Check if we need to stop
+        if (shouldStop)
+        {
+            XrResult xr = xrRequestExitSession(xrSession);
+
+            XrEventDataBuffer runtimeEvent = { XR_TYPE_EVENT_DATA_BUFFER };
+            xr = xrPollEvent(xrInstance, &runtimeEvent);
+
+            while (xr == XR_SUCCESS) {
+
+                if (runtimeEvent.type == XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED)
+                {
+                    XrEventDataSessionStateChanged* event = (XrEventDataSessionStateChanged*)&runtimeEvent;
+                    if (event->state >= XR_SESSION_STATE_STOPPING) {
+                        stopping = true;
+                        return true;
+                    }
+                }
+                if (runtimeEvent.type == XR_TYPE_EVENT_DATA_INSTANCE_LOSS_PENDING)
+                {
+                    stopping = true;
+                    return true;
+                }
+
+                runtimeEvent.type = XR_TYPE_EVENT_DATA_BUFFER;
+                xr = xrPollEvent(xrInstance, &runtimeEvent);
+            }
+        }
+
+        if (stopping)
+        {
+            return true;
+        }
+
         // Wait on frame
 
         xrFrameState = { XR_TYPE_FRAME_STATE };
@@ -563,6 +597,10 @@ namespace BF2VR {
     }
 
     bool OpenXRService::updateActions() {
+        if (stopping)
+        {
+            return true;
+        }
 
         // Sync actions
 
@@ -760,10 +798,13 @@ namespace BF2VR {
         const auto [lx, ly, lz] = xrViews.at(CurrentEye).pose.position;
         FOV = (xrViews.at(CurrentEye).fov.angleUp - xrViews.at(CurrentEye).fov.angleDown) * 57.2958f * RATIO;
 
+        float size = 2.f;
+
         Vec3 HMDLoc;
         HMDLoc.x = lx;
         HMDLoc.y = ly;
         HMDLoc.z = lz;
+        HMDLoc = HMDLoc * Vec3(size, size, size);
 
         Vec4 HMDQuat;
         HMDQuat.w = q0;
@@ -832,6 +873,7 @@ namespace BF2VR {
         aimLoc.x = hlx;
         aimLoc.y = hly;
         aimLoc.z = hlz;
+        aimLoc = aimLoc * Vec3(size, size, size);
 
         Vec4 aimQuat;
         aimQuat.w = hq0;
@@ -840,33 +882,34 @@ namespace BF2VR {
         aimQuat.z = hq3;
         Vec3 aimEuler = eulerFromQuat(aimQuat);
 
-        float yaw = -hudEuler.x;
+        float yaw = -hudEuler.y;
         float pitch = hudEuler.z;
 
-        // Calculate the relative tranfrom for the right hand
-        //Matrix4 rightHandMat = calculateRelativeTransform(HMDLoc, HMDQuat, aimLoc, aimQuat);
-        //rightHandMat.decompose(aimLoc, aimQuat);
 
-        aimLoc = HMDLoc - aimLoc;
+        // Relative aim location in frostbite units
+        Vec3 fbAimLoc = aimLoc - HMDLoc;
 
-        Vec3 fbAimLoc;
-        fbAimLoc.x = aimLoc.y;
-        fbAimLoc.y = aimLoc.x - 0.4f;
-        fbAimLoc.z = -aimLoc.z;
+        Vec3 relAimLoc = rotateAround(aimLoc, HMDLoc, HMDEuler.y);
+
+        fbAimLoc.x = relAimLoc.y; // Up down
+        fbAimLoc.y = relAimLoc.x;
+        fbAimLoc.z = -relAimLoc.z;
+
+        float handSpeed = 0.5f;
+        fbAimLoc = fbAimLoc * Vec3(handSpeed, handSpeed, handSpeed);
 
         Vec4 fbAimQuat;
-        aimQuat = aimQuat.rotate(Vec4(0, 0, (float)sin(45), (float)cos(45)));
         fbAimQuat.x = aimQuat.y;
         fbAimQuat.y = aimQuat.x;
         fbAimQuat.z = -aimQuat.z;
         fbAimQuat.w = aimQuat.w;
         
         GameService::updateCamera(HMDLoc, HMDMat, yaw, pitch);
-        GameService::updateBone("Wep_Root", fbAimLoc, fbAimQuat);
+        //GameService::updateBone("Trajectory", Vec3(0, 0, 0), HMDQuat);
+        GameService::updateBone("Wep_Root", fbAimLoc, Vec4(0, 0, 0, 1));
 
-        float speed = 1.3f;
-        DirectXService::crosshairX = (-aimEuler.x + HMDEuler.x) * speed;
-        DirectXService::crosshairY = (aimEuler.z - HMDEuler.z) * speed;
+        DirectXService::crosshairX = (-aimEuler.y + HMDEuler.y) * 1.3f;
+        DirectXService::crosshairY = (aimEuler.z - HMDEuler.z) * 1.3f;
 
         if (!(grabValue[1].currentState > 0.5f) && isFiring)
         {
@@ -905,23 +948,35 @@ namespace BF2VR {
 
     void OpenXRService::endXR() {
 
+        XrResult xr = xrEndSession(xrSession);
+        if (xr != XR_SUCCESS) {
+            error("Failed to end OpenXR session. Error:" + std::to_string(xr));
+        }
+
         for (uint64_t i = 0; i < xrRTVs.at(0).size(); i++) {
             xrRTVs.at(0).at(i)->Release();
             xrRTVs.at(1).at(i)->Release();
         }
         for (uint32_t i = 0; i < xrViewCount; i++) {
-            if (xrSwapchains.at(i) != XR_NULL_HANDLE && xrDestroySwapchain(xrSwapchains.at(i)) != XR_SUCCESS) {
-                error("Failed to destroy OpenXR swapchain.");
+            xr = xrDestroySwapchain(xrSwapchains.at(i));
+            if (xr != XR_SUCCESS) {
+                error("Failed to destroy OpenXR swapchain. Error:" + std::to_string(xr));
             }
         }
-        if (xrAppSpace != XR_NULL_HANDLE && xrDestroySpace(xrAppSpace) != XR_SUCCESS) {
-            error("Failed to destroy OpenXR app space");
+        xr = xrDestroySpace(xrAppSpace);
+        if (xr != XR_SUCCESS) {
+            error("Failed to destroy OpenXR app space. Error:" + std::to_string(xr));
         }
-        if (xrSession != XR_NULL_HANDLE && xrDestroySession(xrSession) != XR_SUCCESS) {
-            error("Failed to destroy OpenXR session");
+
+        xr = xrDestroySession(xrSession);
+        if (xr != XR_SUCCESS) {
+            error("Failed to destroy OpenXR session. Error:" + std::to_string(xr));
         }
-        if (xrInstance != XR_NULL_HANDLE && xrDestroyInstance(xrInstance) != XR_SUCCESS) {
-            error("Failed to destroy OpenXR instance");
+
+        xr = xrDestroyInstance(xrInstance);
+        if (xr != XR_SUCCESS) {
+            error("Failed to destroy OpenXR instance. Error:" + std::to_string(xr));
         }
+
     }
 }

@@ -124,8 +124,8 @@ namespace BF2VR {
             InputService::useRight = inVehicle;
 
             hmdMat.o.x += playerPosition.x;
-            hmdMat.o.y += playerPosition.y - heightOffset + 3;
-            hmdMat.o.z += playerPosition.z - 0.6f;
+            hmdMat.o.y += playerPosition.y - heightOffset + 2;
+            hmdMat.o.z += playerPosition.z;// - 0.77f;
 
             // Update the transform that the CameraHook will use
             cameraTransfrom = hmdMat;
@@ -248,56 +248,13 @@ namespace BF2VR {
             warn("Could not find the skeleton. 6dof hands will not work.");
             return toReturn;
         }
-         
 
         for (boneState state : boneStates)
         {
-            // Hide-only bones
-            if (state.location.x == -1)
-            {
-                Vec3 location;
-                Vec4 rotation;
-                Vec3 scale;
-
-                // Hide bone
-                if (!skeleton.getBoneRelative(state.boneName, location, rotation, scale))
-                {
-                    warn(std::format("Bone {} could not be hidden.", state.boneName));
-                    continue;
-                }
-                if (!skeleton.poseBoneRelative(state.boneName, location, rotation, state.scale))
-                {
-                    warn(std::format("Bone {} could not be hidden.", state.boneName));
-                }
-                continue;
-            }
-
             if (!skeleton.poseBone(state.boneName, state.location, state.rotation, state.scale))
             {
                 warn(std::format("Bone {} could not be posed.", state.boneName));
             }
-        }
-
-        // Fix 3rd person
-        Vec3 location;
-        Vec4 rotation;
-        Vec3 scale;
-        Vec3 noScale = Vec3(0, 0, 0);
-        if (!skeleton.getBoneRelative("Head", location, rotation, scale))
-        {
-            warn("Could not find head.");
-            return toReturn;
-        }
-
-        // Hide head
-        if (!skeleton.poseBoneRelative("Head", location, rotation, noScale))
-        {
-            warn("Could not correct 3rd person.");
-        }
-
-        if (!skeleton.poseBoneRelative("Camera3p_Rig", location, rotation, scale))
-        {
-            warn("Could not correct 3rd person.");
         }
 
         return toReturn;
@@ -323,26 +280,6 @@ namespace BF2VR {
 
         boneStates.push_back({ boneName, location, rotation, Vec3(1, 1, 1) });
     }
-
-    void GameService::updateBone(const char* boneName, bool show)
-    {
-        // Check for existing entry
-        for (int i = 0; i < boneStates.size(); i++)
-        {
-            boneState state = boneStates.at(i);
-            if (strcmp(state.boneName, boneName) == 0)
-            {
-                state.scale = Vec3(0,0,0);
-
-                boneStates.at(i) = state;
-
-                return;
-            }
-        }
-
-        boneStates.push_back({ boneName, Vec3(-1, -1, -1), Vec4(-1, -1, -1, -1), Vec3(0, 0, 0)});
-    }
-
 
     bool GameService::enableHooks() {
 
