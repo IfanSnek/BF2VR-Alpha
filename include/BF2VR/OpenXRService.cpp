@@ -799,7 +799,7 @@ namespace BF2VR {
         FOV = (xrViews.at(CurrentEye).fov.angleUp - xrViews.at(CurrentEye).fov.angleDown) * 57.2958f * RATIO;
 
         // Transform scale
-        float size = 3.f;
+        float size = 1.f;
 
         Vec3 HMDLoc;
         HMDLoc.x = lx;

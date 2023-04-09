@@ -37,9 +37,10 @@ DWORD __stdcall mainThread(HMODULE module)
 
     RECT desktop;
     GetWindowRect(ownWindow, &desktop);
-    MoveWindow(ownWindow, 0, 0, (int)(desktop.bottom * RATIO), desktop.bottom, TRUE);
+    MoveWindow(ownWindow, 0, 0, (int)(desktop.bottom * RATIO), desktop.bottom, false);
 
-    OpenXRService::eyeWidth = (int)(desktop.bottom * RATIO);
+    GetWindowRect(ownWindow, &desktop);
+    OpenXRService::eyeWidth = desktop.right;
     OpenXRService::eyeHeight = desktop.bottom;
 
 
@@ -92,10 +93,13 @@ DWORD __stdcall mainThread(HMODULE module)
 
 
     for (;;) {
-        Sleep(10);
+        Sleep(60);
         if (GetAsyncKeyState(VK_END)) {
             shutdown();
             return 0;
+        }
+        if (GetAsyncKeyState(VK_HOME)) {
+            loadConfig();
         }
     }
     return 0;

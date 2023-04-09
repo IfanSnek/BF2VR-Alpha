@@ -5,6 +5,8 @@
 #include "OpenXRService.h"
 #include "InputService.h"
 
+#include "../../third-party/INI.h"
+
 namespace BF2VR
 {
     // Print to console and a file
@@ -151,10 +153,11 @@ namespace BF2VR
 
 
     void loadConfig() {
+        log("Loading Config");
 
         // Open config.txt and read it line by line, applying the values
 
-        std::ifstream Config("config.txt");
+        std::ifstream Config("config.ini");
 
         if (!Config)
         {
@@ -163,45 +166,26 @@ namespace BF2VR
             info("No valid configuration has been found. The game will autoconfigure, but then you will need to restart the game. Please read the below logs:");
             info("##############################");
 
-            doReconfig = true;;
+            doReconfig = true;
+            Config.close();
             return;
         }
-
-        std::string text;
-        std::string MultiLineProperty = "";
-
-        while (getline(Config, text)) {
-
-            if (MultiLineProperty != "")
-            {
-                // Continue where we left off
-
-                if (MultiLineProperty == "EYERATIO")
-                {
-                    RATIO = std::stof(text);
-                }
-
-                //std::cout << MultiLineProperty << "=" << text << std::endl;
-                MultiLineProperty = "";
-            }
-            // Boolean parameters
-            else if (text == "NOFOV")
-            {
-                NOFOV = true;
-                info("Manual fov enabled.");
-            }
-            else if (text == "NOHAND")
-            {
-                HEADAIM = true;
-                info("Head aim enabled.");
-            }
-            // Value parameters
-            else
-            {
-                MultiLineProperty = text;
-            }
+        else {
+            Config.close();
         }
-        Config.close();
+
+        // Set global parsing/saving options
+        INI::PARSE_FLAGS = INI::PARSE_COMMENTS_ALL | INI::PARSE_COMMENTS_SLASH | INI::PARSE_COMMENTS_HASH;
+        INI::SAVE_FLAGS = INI::SAVE_PRUNE | INI::SAVE_PADDING_SECTIONS | INI::SAVE_SPACE_SECTIONS | INI::SAVE_SPACE_KEYS | INI::SAVE_TAB_KEYS | INI::SAVE_SEMICOLON_KEYS;
+
+        INI ini("config.ini", true);  // Assign ini file and parse
+
+        ini.select("Core");
+
+        RATIO = ini.getAs<float>("Core", "EyeAspectRatio", 1.f);
+        HEADAIM = ini.getAs<bool>("Core", "AimWithHead", false);
+        NOFOV = ini.getAs<bool>("Core", "ManualFOV", false);
+        FOV = ini.getAs<float>("Core", "FOVOverride", 90.f);
 
         success("Loaded Config.");
 
@@ -210,12 +194,33 @@ namespace BF2VR
     }
 
     void saveConfig() {
+        log("Saving Config");
 
-        static std::ofstream Config("config.txt", std::ios_base::app);
+        // Make the file
+        std::ofstream Config("config.ini", std::ios_base::app);
+        Config.close();
 
-        Config << "EYERATIO" << std::endl;
-        Config << std::to_string(RATIO) << std::endl;
+        // Set global parsing/saving options
+        INI::PARSE_FLAGS = INI::PARSE_COMMENTS_ALL | INI::PARSE_COMMENTS_SLASH | INI::PARSE_COMMENTS_HASH;
+        INI::SAVE_FLAGS = INI::SAVE_PRUNE | INI::SAVE_PADDING_SECTIONS | INI::SAVE_SPACE_SECTIONS | INI::SAVE_SPACE_KEYS | INI::SAVE_TAB_KEYS | INI::SAVE_SEMICOLON_KEYS;
 
+        INI ini("config.ini", true);  // Assign ini file and parse
+
+        ini.create("Core");
+
+        ini.set("Core", "EyeAspectRatio", std::to_string(RATIO));
+
+        if (NOFOV)
+            ini.set("Core", "ManualFOV", "true");
+
+        if (HEADAIM)
+            ini.set("Core", "AimWithHead", "true");
+
+        if (FOV != 90.f)
+            ini.set("Core", "FOVOverride", std::to_string(FOV));
+
+
+        ini.save("config.ini");
         success("Saved Config.");
     }
 
