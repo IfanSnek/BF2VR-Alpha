@@ -9,7 +9,6 @@
 #include "DirectXService.h"
 #include "GameService.h"
 #include "Utils.h"
-#include "SDKOLD.h"
 
 namespace BF2VR {
     bool OpenXRService::createXRInstanceWithExtensions() {
@@ -552,6 +551,12 @@ namespace BF2VR {
     }
 
     bool OpenXRService::submitFrame(ID3D11Texture2D* texture) {
+
+        if (stopping)
+        {
+            return true;
+        }
+
         int currentEye = !onLeftEye; // If the eye is left, Lefteye = 1, but the arrays have the left eye at position 1, index 0.
 
         xrProjectionViews.at(currentEye) = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
@@ -785,6 +790,7 @@ namespace BF2VR {
 
         if (doReconfig) {
             RATIO = (xrViews.at(CurrentEye).fov.angleRight - xrViews.at(CurrentEye).fov.angleLeft) / (xrViews.at(CurrentEye).fov.angleUp - xrViews.at(CurrentEye).fov.angleDown);
+            FOV = (xrViews.at(CurrentEye).fov.angleUp - xrViews.at(CurrentEye).fov.angleDown) * 57.2958f;
             info("The screen aspect ratio of an HMD eye is " + std::to_string(RATIO));
             saveConfig();
             info("Saved the new config! You may restart the game now.");
@@ -796,7 +802,6 @@ namespace BF2VR {
 
         const auto [q1, q2, q3, q0] = xrViews.at(CurrentEye).pose.orientation;
         const auto [lx, ly, lz] = xrViews.at(CurrentEye).pose.position;
-        FOV = (xrViews.at(CurrentEye).fov.angleUp - xrViews.at(CurrentEye).fov.angleDown) * 57.2958f * RATIO;
 
         // Transform scale
         float size = 1.f;
@@ -896,7 +901,7 @@ namespace BF2VR {
         fbAimLoc.y = relAimLoc.x;
         fbAimLoc.z = -relAimLoc.z;
 
-        float handSpeed = 0.1f;
+        float handSpeed = 0.3f;
         fbAimLoc = fbAimLoc * Vec3(handSpeed, handSpeed, handSpeed);
 
 

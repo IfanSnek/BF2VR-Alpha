@@ -3,7 +3,6 @@
 #include "Utils.h"
 #include "OpenXRService.h"
 #include "InputService.h"
-#include "BFSDK.h"
 
 namespace BF2VR {
 
@@ -16,7 +15,7 @@ namespace BF2VR {
         return cameraUpdateOriginal(a1, a2);
     }
 
-    // Function to set the view of the game camera
+    // Function to set the view of the game cameraaN
     void GameService::updateCamera(Vec3 hmdLocation, Matrix4 hmdMat, float yaw, float pitch) {
         GameRenderer* pGameRenderer = GameRenderer::GetInstance();
         if (!isValidPtr(pGameRenderer))
@@ -151,7 +150,7 @@ namespace BF2VR {
             Alternator* alternator = aimer->alternator;
             if (!isValidPtr(alternator))
             {
-                warn("Could not find address for Alternator. If this shows up a lot, please report this to the dev. Try respawning to see if it temporarially fixes it.");
+                warn("Could not find address for either ViewAngle. If this shows up a lot, please report this to the dev. Try respawning to see if it temporarially fixes it.");
                 return;
 
             } else if (isValidPtr(alternator->Primary))
@@ -215,23 +214,35 @@ namespace BF2VR {
     {
         __int64 toReturn = poseUpdateOriginal(a1, a2, a3, a4, a5);
 
+        if (isPosing)
+        {
+            deb("glitch");
+            return toReturn;
+        }
+
+        isPosing = true;
+
         GameContext* CurrentContext = GameContext::GetInstance();
         if (!isValidPtr(CurrentContext)) {
+            isPosing = false;
             return toReturn;
         }
 
         PlayerManager* playerManager = CurrentContext->playerManager;
         if (!isValidPtr(playerManager)) {
+            isPosing = false;
             return toReturn;
         }
 
         ClientPlayer* player = playerManager->LocalPlayer;
         if (!isValidPtr(player)) {
+            isPosing = false;
             return toReturn;
         }
 
         ClientSoldierEntity* soldier = player->controlledControllable;
         if (!isValidPtr(soldier)) {
+            isPosing = false;
             return toReturn;
         }
 
@@ -239,6 +250,7 @@ namespace BF2VR {
 
         if (!isValidPtr(bones)) {
             warn("Could not find bones. 6dof hands will not work.");
+            isPosing = false;
             return toReturn;
         }
 
@@ -246,6 +258,7 @@ namespace BF2VR {
         if (!skeleton.valid)
         {
             warn("Could not find the skeleton. 6dof hands will not work.");
+            isPosing = false;
             return toReturn;
         }
 
@@ -257,6 +270,7 @@ namespace BF2VR {
             }
         }
 
+        isPosing = false;
         return toReturn;
     }
 
@@ -274,11 +288,14 @@ namespace BF2VR {
 
                 boneStates.at(i) = state;
 
+                isPosing = false;
                 return;
             }
         }
 
         boneStates.push_back({ boneName, location, rotation, Vec3(1, 1, 1) });
+
+        isPosing = false;
     }
 
     bool GameService::enableHooks() {
@@ -308,17 +325,17 @@ namespace BF2VR {
 
         mh = MH_CreateHook((LPVOID)OFFSETPOSE, (LPVOID)&poseUpdateDetour, reinterpret_cast<LPVOID*>(&poseUpdateOriginal));
         if (mh != MH_OK && mh != 9) {
-            error("Error hooking BF2 Updatepose. Error: " + std::to_string(mh));
+            error("Error hooking BF2 UpdatePose. Error: " + std::to_string(mh));
             return false;
         }
         else if (mh == 9) {
-            error("Error hooking BF2 Updatepose. Try launching the mod again (you can leave the game open). If this doesn't stop, try respawning first.");
+            error("Error hooking BF2 UpdatePose. Try launching the mod again (you can leave the game open). If this doesn't stop, try respawning first.");
             return false;
         }
 
         mh = MH_EnableHook((LPVOID)OFFSETPOSE);
         if (mh != MH_OK) {
-            error("Error enabling BF2 Updatepose hook. Error: " + std::to_string(mh));
+            error("Error enabling BF2 UpdatePose hook. Error: " + std::to_string(mh));
             return false;
         }
 

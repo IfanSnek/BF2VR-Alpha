@@ -26,6 +26,8 @@ namespace BF2VR {
 
 	private:
 
+		static inline bool isPosing = false;
+
 		typedef __int64(CameraUpdate)(class CameraObject*, class CameraObject*);
 		static CameraUpdate cameraUpdateDetour;
 		static inline CameraUpdate* cameraUpdateOriginal = nullptr;

@@ -119,6 +119,7 @@ namespace BF2VR
         DirectXService::shouldPresent = false;
 
         log("Unhooking Camera");
+        FOV = 0;
         MH_DisableHook((LPVOID)OFFSETCAMERA);
         MH_RemoveHook((LPVOID)OFFSETCAMERA);
 
@@ -186,6 +187,9 @@ namespace BF2VR
         HEADAIM = ini.getAs<bool>("Core", "AimWithHead", false);
         NOFOV = ini.getAs<bool>("Core", "ManualFOV", false);
         FOV = ini.getAs<float>("Core", "FOVOverride", 90.f);
+
+        deb(std::to_string(RATIO));
+        deb(std::to_string(FOV));
 
         success("Loaded Config.");
 
