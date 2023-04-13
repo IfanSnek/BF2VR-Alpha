@@ -9,10 +9,9 @@
 #include "DirectXService.h"
 #include "GameService.h"
 #include "Utils.h"
-#include "SDKOLD.h"
 
 namespace BF2VR {
-    bool OpenXRService::CreateXRInstanceWithExtensions() {
+    bool OpenXRService::createXRInstanceWithExtensions() {
 
         // Enable extensions
         std::vector<const char*> enabledExtensions;
@@ -106,10 +105,10 @@ namespace BF2VR {
         return true;
     }
 
-    bool OpenXRService::BeginXRSession(ID3D11Device* device) {
+    bool OpenXRService::beginXRSession(ID3D11Device* pDevice) {
 
         XrGraphicsBindingD3D11KHR graphicsBinding = { XR_TYPE_GRAPHICS_BINDING_D3D11_KHR };
-        graphicsBinding.device = device;
+        graphicsBinding.device = pDevice;
         XrSessionCreateInfo xrSessionInfo = { XR_TYPE_SESSION_CREATE_INFO };
         xrSessionInfo.next = &graphicsBinding;
         xrSessionInfo.systemId = xrSystemId;
@@ -155,8 +154,8 @@ namespace BF2VR {
             swapchainInfo.mipCount = 1;
             swapchainInfo.faceCount = 1;
             swapchainInfo.format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-            swapchainInfo.width = EyeWidth;
-            swapchainInfo.height = EyeHeight;
+            swapchainInfo.width = eyeWidth;
+            swapchainInfo.height = eyeHeight;
             swapchainInfo.sampleCount = 1;
             swapchainInfo.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
 
@@ -210,13 +209,13 @@ namespace BF2VR {
         }
 
         // Configure actions
-        PrepareActions();
+        prepareActions();
 
-        VRReady = true;
+        isVRReady = true;
         return true;
     }
 
-    bool OpenXRService::PrepareActions() {
+    bool OpenXRService::prepareActions() {
 
         log("Preparing VR Actions ...");
 
@@ -373,13 +372,13 @@ namespace BF2VR {
 
         // Suggest interaction profile
 
-        XrPath grip_pose_path[2];
-        xrStringToPath(xrInstance, "/user/hand/left/input/grip/pose", &grip_pose_path[0]);
-        xrStringToPath(xrInstance, "/user/hand/right/input/grip/pose", &grip_pose_path[1]);
+        XrPath gripPosePath[2];
+        xrStringToPath(xrInstance, "/user/hand/left/input/grip/pose", &gripPosePath[0]);
+        xrStringToPath(xrInstance, "/user/hand/right/input/grip/pose", &gripPosePath[1]);
 
 
-        XrPath interaction_profile_path;
-        xr = xrStringToPath(xrInstance, "/interaction_profiles/oculus/touch_controller", &interaction_profile_path);
+        XrPath interactionProfilePath;
+        xr = xrStringToPath(xrInstance, "/interaction_profiles/oculus/touch_controller", &interactionProfilePath);
         if (xr != XR_SUCCESS) {
             warn("Failed to get interaction profile, motion controlls will not work. Error: " + std::to_string(xr));
             return false;
@@ -388,10 +387,10 @@ namespace BF2VR {
         std::vector<XrActionSuggestedBinding> bindings;
         XrActionSuggestedBinding binding;
         binding.action = poseAction;
-        binding.binding = grip_pose_path[0];
+        binding.binding = gripPosePath[0];
         bindings.push_back(binding);
         binding.action = poseAction;
-        binding.binding = grip_pose_path[1];
+        binding.binding = gripPosePath[1];
         bindings.push_back(binding);
 
         binding.action = triggerAction;
@@ -430,12 +429,12 @@ namespace BF2VR {
 
 
 
-        XrInteractionProfileSuggestedBinding suggested_bindings = { XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
-        suggested_bindings.interactionProfile = interaction_profile_path;
-        suggested_bindings.countSuggestedBindings = 11;
-        suggested_bindings.suggestedBindings = bindings.data();
+        XrInteractionProfileSuggestedBinding suggestedBindings = { XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
+        suggestedBindings.interactionProfile = interactionProfilePath;
+        suggestedBindings.countSuggestedBindings = 11;
+        suggestedBindings.suggestedBindings = bindings.data();
 
-        xrSuggestInteractionProfileBindings(xrInstance, &suggested_bindings);
+        xrSuggestInteractionProfileBindings(xrInstance, &suggestedBindings);
         if (xr != XR_SUCCESS) {
             warn("Failed to suggest bindings, motion controlls will not work. Error: " + std::to_string(xr));
             return false;
@@ -443,10 +442,10 @@ namespace BF2VR {
 
         // Attach actions
 
-        XrSessionActionSetsAttachInfo actionset_attach_info = { XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO };
-        actionset_attach_info.countActionSets = 1;
-        actionset_attach_info.actionSets = &actionSet;
-        xr = xrAttachSessionActionSets(xrSession, &actionset_attach_info);
+        XrSessionActionSetsAttachInfo actionsetAttachInfo = { XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO };
+        actionsetAttachInfo.countActionSets = 1;
+        actionsetAttachInfo.actionSets = &actionSet;
+        xr = xrAttachSessionActionSets(xrSession, &actionsetAttachInfo);
         if (xr != XR_SUCCESS) {
             warn("Failed to attach action set, motion controlls will not work. Error: " + std::to_string(xr));
             return false;
@@ -454,12 +453,12 @@ namespace BF2VR {
 
         // Create hand pose spaces
         {
-            XrActionSpaceCreateInfo action_space_info = { XR_TYPE_ACTION_SPACE_CREATE_INFO };
-            action_space_info.action = poseAction;
-            action_space_info.poseInActionSpace = { { 0, 0, 0, 1 }, { 0, 0, 0 } };
-            action_space_info.subactionPath = handPaths[0];
+            XrActionSpaceCreateInfo actionSpaceInfo = { XR_TYPE_ACTION_SPACE_CREATE_INFO };
+            actionSpaceInfo.action = poseAction;
+            actionSpaceInfo.poseInActionSpace = { { 0, 0, 0, 1 }, { 0, 0, 0 } };
+            actionSpaceInfo.subactionPath = handPaths[0];
 
-            xr = xrCreateActionSpace(xrSession, &action_space_info, &pose_action_spaces[0]);
+            xr = xrCreateActionSpace(xrSession, &actionSpaceInfo, &poseActionSpaces[0]);
             if (xr != XR_SUCCESS) {
                 warn("Failed to create left hand pose space, motion controlls will not work. Error: " + std::to_string(xr));
                 return false;
@@ -467,12 +466,12 @@ namespace BF2VR {
         }
 
         {
-            XrActionSpaceCreateInfo action_space_info = { XR_TYPE_ACTION_SPACE_CREATE_INFO };
-            action_space_info.action = poseAction;
-            action_space_info.poseInActionSpace = { { 0, 0, 0, 1 }, { 0, 0, 0 } };
-            action_space_info.subactionPath = handPaths[1];
+            XrActionSpaceCreateInfo actionSpaceInfo = { XR_TYPE_ACTION_SPACE_CREATE_INFO };
+            actionSpaceInfo.action = poseAction;
+            actionSpaceInfo.poseInActionSpace = { { 0, 0, 0, 1 }, { 0, 0, 0 } };
+            actionSpaceInfo.subactionPath = handPaths[1];
 
-            xr = xrCreateActionSpace(xrSession, &action_space_info, &pose_action_spaces[1]);
+            xr = xrCreateActionSpace(xrSession, &actionSpaceInfo, &poseActionSpaces[1]);
             if (xr != XR_SUCCESS) {
                 warn("Failed to create left hand pose space, motion controlls will not work. Error: " + std::to_string(xr));
                 return false;
@@ -484,8 +483,42 @@ namespace BF2VR {
         return true;
     }
 
-    bool OpenXRService::BeginFrameAndGetVectors(Vec3& Loc, Vec4& Rot, Matrix4 outMatrix)
+    bool OpenXRService::beginFrameAndGetVectors(Vec3& Loc, Vec4& Rot, Matrix4 outMatrix)
     {
+        // Check if we need to stop
+        if (shouldStop)
+        {
+            XrResult xr = xrRequestExitSession(xrSession);
+
+            XrEventDataBuffer runtimeEvent = { XR_TYPE_EVENT_DATA_BUFFER };
+            xr = xrPollEvent(xrInstance, &runtimeEvent);
+
+            while (xr == XR_SUCCESS) {
+
+                if (runtimeEvent.type == XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED)
+                {
+                    XrEventDataSessionStateChanged* event = (XrEventDataSessionStateChanged*)&runtimeEvent;
+                    if (event->state >= XR_SESSION_STATE_STOPPING) {
+                        stopping = true;
+                        return true;
+                    }
+                }
+                if (runtimeEvent.type == XR_TYPE_EVENT_DATA_INSTANCE_LOSS_PENDING)
+                {
+                    stopping = true;
+                    return true;
+                }
+
+                runtimeEvent.type = XR_TYPE_EVENT_DATA_BUFFER;
+                xr = xrPollEvent(xrInstance, &runtimeEvent);
+            }
+        }
+
+        if (stopping)
+        {
+            return true;
+        }
+
         // Wait on frame
 
         xrFrameState = { XR_TYPE_FRAME_STATE };
@@ -517,8 +550,14 @@ namespace BF2VR {
 
     }
 
-    bool OpenXRService::SubmitFrame(ID3D11Texture2D* texture) {
-        int currentEye = !LeftEye; // If the eye is left, Lefteye = 1, but the arrays have the left eye at position 1, index 0.
+    bool OpenXRService::submitFrame(ID3D11Texture2D* texture) {
+
+        if (stopping)
+        {
+            return true;
+        }
+
+        int currentEye = !onLeftEye; // If the eye is left, Lefteye = 1, but the arrays have the left eye at position 1, index 0.
 
         xrProjectionViews.at(currentEye) = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
         xrProjectionViews.at(currentEye).pose = xrViews.at(currentEye).pose;
@@ -526,8 +565,8 @@ namespace BF2VR {
         xrProjectionViews.at(currentEye).subImage.swapchain = xrSwapchains.at(currentEye);
         xrProjectionViews.at(currentEye).subImage.imageRect.offset = {0, 0};
         xrProjectionViews.at(currentEye).subImage.imageRect.extent = {
-            static_cast<int32_t>(EyeWidth),
-            static_cast<int32_t>(EyeHeight)
+            static_cast<int32_t>(eyeWidth),
+            static_cast<int32_t>(eyeHeight)
         };
 
 
@@ -548,7 +587,7 @@ namespace BF2VR {
             return false;
         }
 
-        if (!DirectXService::RenderXRFrame(texture, xrRTVs.at(currentEye).at(imageId))) {
+        if (!DirectXService::renderXRFrame(texture, xrRTVs.at(currentEye).at(imageId))) {
             warn("Skipped a frame.");
         }
 
@@ -562,41 +601,47 @@ namespace BF2VR {
         return true;
     }
 
-    bool OpenXRService::UpdateActions() {
+    bool OpenXRService::updateActions() {
+        if (stopping)
+        {
+            return true;
+        }
 
         // Sync actions
 
-        XrActiveActionSet active_actionsets = { actionSet, XR_NULL_PATH };
-        XrActionsSyncInfo actions_sync_info = { XR_TYPE_ACTIONS_SYNC_INFO };
-        actions_sync_info.countActiveActionSets = 1;
-        actions_sync_info.activeActionSets = &active_actionsets;
+        XrActiveActionSet activeActionsets = { actionSet, XR_NULL_PATH };
+        XrActionsSyncInfo actionsSyncInfo = { XR_TYPE_ACTIONS_SYNC_INFO };
+        actionsSyncInfo.countActiveActionSets = 1;
+        actionsSyncInfo.activeActionSets = &activeActionsets;
 
-        XrResult xr = xrSyncActions(xrSession, &actions_sync_info);
+        XrResult xr = xrSyncActions(xrSession, &actionsSyncInfo);
         if (xr != XR_SUCCESS && xr != XR_SESSION_NOT_FOCUSED) {
             warn("Failed to sync actions. Skipping motion controls this frame. Error: " + std::to_string(xr));
             return false;
         }
+        /*
         else if (xr == XR_SESSION_NOT_FOCUSED)
         {
             warn("Mod has no focus. Please return to the game.");
         }
+        */
 
         // Get hand poses
 
         for (int i = 0; i < 2; i++) {
             {
                 XrActionStatePose pose_state = { XR_TYPE_ACTION_STATE_POSE };
-                XrActionStateGetInfo get_info = { XR_TYPE_ACTION_STATE_GET_INFO };
-                get_info.action = poseAction;
-                get_info.subactionPath = handPaths[i];
-                xr = xrGetActionStatePose(xrSession, &get_info, &pose_state);
+                XrActionStateGetInfo getInfo = { XR_TYPE_ACTION_STATE_GET_INFO };
+                getInfo.action = poseAction;
+                getInfo.subactionPath = handPaths[i];
+                xr = xrGetActionStatePose(xrSession, &getInfo, &pose_state);
                 if (xr != XR_SUCCESS) {
                     warn("Failed to get pose state for a hand. Error: " + std::to_string(xr) + ". Hand: " + std::to_string(i + 1));
                 }
 
-                hand_locations[i].type = XR_TYPE_SPACE_LOCATION;
+                handLocations[i].type = XR_TYPE_SPACE_LOCATION;
 
-                xr = xrLocateSpace(pose_action_spaces[i], xrAppSpace, xrFrameState.predictedDisplayTime, &hand_locations[i]);
+                xr = xrLocateSpace(poseActionSpaces[i], xrAppSpace, xrFrameState.predictedDisplayTime, &handLocations[i]);
                 if (xr != XR_SUCCESS) {
                     warn("Failed to get pose value for a hand. Error: " + std::to_string(xr) + ". Hand: " + std::to_string(i + 1));
                 }
@@ -604,12 +649,12 @@ namespace BF2VR {
             {
                 // Get controller trigger states
 
-                grab_value[i].type = XR_TYPE_ACTION_STATE_FLOAT;
+                grabValue[i].type = XR_TYPE_ACTION_STATE_FLOAT;
 
-                XrActionStateGetInfo get_info = { XR_TYPE_ACTION_STATE_GET_INFO };
-                get_info.action = triggerAction;
-                get_info.subactionPath = handPaths[i];
-                xr = xrGetActionStateFloat(xrSession, &get_info, &grab_value[i]);
+                XrActionStateGetInfo getInfo = { XR_TYPE_ACTION_STATE_GET_INFO };
+                getInfo.action = triggerAction;
+                getInfo.subactionPath = handPaths[i];
+                xr = xrGetActionStateFloat(xrSession, &getInfo, &grabValue[i]);
                 if (xr != XR_SUCCESS) {
                     warn("Failed to get value for a trigger. Error: " + std::to_string(xr));
                 }
@@ -617,12 +662,12 @@ namespace BF2VR {
             {
                 // Get controller trigger states
 
-                grip_value[i].type = XR_TYPE_ACTION_STATE_FLOAT;
+                gripValue[i].type = XR_TYPE_ACTION_STATE_FLOAT;
 
-                XrActionStateGetInfo get_info = { XR_TYPE_ACTION_STATE_GET_INFO };
-                get_info.action = gripAction;
-                get_info.subactionPath = handPaths[i];
-                xr = xrGetActionStateFloat(xrSession, &get_info, &grip_value[i]);
+                XrActionStateGetInfo getInfo = { XR_TYPE_ACTION_STATE_GET_INFO };
+                getInfo.action = gripAction;
+                getInfo.subactionPath = handPaths[i];
+                xr = xrGetActionStateFloat(xrSession, &getInfo, &gripValue[i]);
                 if (xr != XR_SUCCESS) {
                     warn("Failed to get value for a grip. Error: " + std::to_string(xr));
                 }
@@ -632,25 +677,25 @@ namespace BF2VR {
         {
             // Get menu button state
 
-            menu_value.type = XR_TYPE_ACTION_STATE_BOOLEAN;
+            menuValue.type = XR_TYPE_ACTION_STATE_BOOLEAN;
 
-            XrActionStateGetInfo get_info = { XR_TYPE_ACTION_STATE_GET_INFO };
-            get_info.action = menuAction;
-            get_info.subactionPath = handPaths[0];
-            xr = xrGetActionStateBoolean(xrSession, &get_info, &menu_value);
+            XrActionStateGetInfo getInfo = { XR_TYPE_ACTION_STATE_GET_INFO };
+            getInfo.action = menuAction;
+            getInfo.subactionPath = handPaths[0];
+            xr = xrGetActionStateBoolean(xrSession, &getInfo, &menuValue);
             if (xr != XR_SUCCESS) {
                 warn("Failed to get value for menu button. Error: " + std::to_string(xr));
             }
-            if (menu_value.currentState && !pressingMenu)
+            if (menuValue.currentState && !isPressingMenu)
             {
                 info("Toggled menu.");
-                pressingMenu = true;
-                Menu = !Menu;
-                GameService::SetMenu(Menu);
+                isPressingMenu = true;
+                showUI = !showUI;
+                GameService::setUIDrawState(showUI);
             }
-            if (!menu_value.currentState && pressingMenu)
+            if (!menuValue.currentState && isPressingMenu)
             {
-                pressingMenu = false;
+                isPressingMenu = false;
             }
 
         }
@@ -659,12 +704,12 @@ namespace BF2VR {
         {
             // Get roll button state
 
-            roll_value.type = XR_TYPE_ACTION_STATE_BOOLEAN;
+            rollValue.type = XR_TYPE_ACTION_STATE_BOOLEAN;
 
-            XrActionStateGetInfo get_info = { XR_TYPE_ACTION_STATE_GET_INFO };
-            get_info.action = rollAction;
-            get_info.subactionPath = handPaths[1];
-            xr = xrGetActionStateBoolean(xrSession, &get_info, &roll_value);
+            XrActionStateGetInfo getInfo = { XR_TYPE_ACTION_STATE_GET_INFO };
+            getInfo.action = rollAction;
+            getInfo.subactionPath = handPaths[1];
+            xr = xrGetActionStateBoolean(xrSession, &getInfo, &rollValue);
             if (xr != XR_SUCCESS) {
                 warn("Failed to get value for roll button. Error: " + std::to_string(xr));
             }
@@ -674,12 +719,12 @@ namespace BF2VR {
         {
             // Get jump button state
 
-            jump_value.type = XR_TYPE_ACTION_STATE_BOOLEAN;
+            jumpValue.type = XR_TYPE_ACTION_STATE_BOOLEAN;
 
-            XrActionStateGetInfo get_info = { XR_TYPE_ACTION_STATE_GET_INFO };
-            get_info.action = jumpAction;
-            get_info.subactionPath = handPaths[1];
-            xr = xrGetActionStateBoolean(xrSession, &get_info, &jump_value);
+            XrActionStateGetInfo getInfo = { XR_TYPE_ACTION_STATE_GET_INFO };
+            getInfo.action = jumpAction;
+            getInfo.subactionPath = handPaths[1];
+            xr = xrGetActionStateBoolean(xrSession, &getInfo, &jumpValue);
             if (xr != XR_SUCCESS) {
                 warn("Failed to get value for jump button. Error: " + std::to_string(xr));
             }
@@ -689,12 +734,12 @@ namespace BF2VR {
         {
             // Get reload button state
 
-            reload_value.type = XR_TYPE_ACTION_STATE_BOOLEAN;
+            reloadValue.type = XR_TYPE_ACTION_STATE_BOOLEAN;
 
-            XrActionStateGetInfo get_info = { XR_TYPE_ACTION_STATE_GET_INFO };
-            get_info.action = reloadAction;
-            get_info.subactionPath = handPaths[0];
-            xr = xrGetActionStateBoolean(xrSession, &get_info, &reload_value);
+            XrActionStateGetInfo getInfo = { XR_TYPE_ACTION_STATE_GET_INFO };
+            getInfo.action = reloadAction;
+            getInfo.subactionPath = handPaths[0];
+            xr = xrGetActionStateBoolean(xrSession, &getInfo, &reloadValue);
             if (xr != XR_SUCCESS) {
                 warn("Failed to get value for reload button. Error: " + std::to_string(xr));
             }
@@ -704,116 +749,120 @@ namespace BF2VR {
         {
             // Get walking state
 
-            menu_value.type = XR_TYPE_ACTION_STATE_VECTOR2F;
+            walkValue.type = XR_TYPE_ACTION_STATE_VECTOR2F;
 
-            XrActionStateGetInfo get_info = { XR_TYPE_ACTION_STATE_GET_INFO };
-            get_info.action = walkAction;
-            get_info.subactionPath = handPaths[0];
-            xr = xrGetActionStateVector2f(xrSession, &get_info, &walk_value);
+            XrActionStateGetInfo getInfo = { XR_TYPE_ACTION_STATE_GET_INFO };
+            getInfo.action = walkAction;
+            getInfo.subactionPath = handPaths[0];
+            xr = xrGetActionStateVector2f(xrSession, &getInfo, &walkValue);
             if (xr != XR_SUCCESS) {
                 warn("Failed to get value for the left thumbstick. Error: " + std::to_string(xr));
             }
 
             // Set the xinput state
 
-            InputService::lX = walk_value.currentState.x * 32767;
-            InputService::lY = walk_value.currentState.y * 32767;
+            InputService::thumbLX = (short)(walkValue.currentState.x * 32767);
+            InputService::thumbLY = (short)(walkValue.currentState.y * 32767);
 
         }
 
-        InputService::bL = grab_value[0].currentState * 255;
-        InputService::bR = grab_value[1].currentState * 255;
+        InputService::leftTrigger = (byte)(grabValue[0].currentState * 255);
+        InputService::rightTrigger = (byte)(grabValue[1].currentState * 255);
 
 
         InputService::buttons = 0x0040; // Always sprint
-        if (roll_value.currentState)
+        if (rollValue.currentState)
             InputService::buttons = InputService::buttons | 0x2000;
-        if (jump_value.currentState)
+        if (jumpValue.currentState)
             InputService::buttons = InputService::buttons | 0x1000;
-        if (reload_value.currentState)
+        if (reloadValue.currentState)
             InputService::buttons = InputService::buttons | 0x4000;
-        if (grip_value[0].currentState > 0.8)
+        if (gripValue[0].currentState > 0.8)
             InputService::buttons = InputService::buttons | 0x0100;
-        if (grip_value[1].currentState > 0.8)
+        if (gripValue[1].currentState > 0.8)
             InputService::buttons = InputService::buttons | 0x0200;
 
-        InputService::Update();
+        InputService::update();
 
         return true;
     }
 
-    bool OpenXRService::UpdatePoses() {
-        int CurrentEye = !LeftEye;
+    bool OpenXRService::updatePoses() {
+        int CurrentEye = !onLeftEye;
 
-        if (Reconfig) {
+        if (doReconfig) {
             RATIO = (xrViews.at(CurrentEye).fov.angleRight - xrViews.at(CurrentEye).fov.angleLeft) / (xrViews.at(CurrentEye).fov.angleUp - xrViews.at(CurrentEye).fov.angleDown);
+            FOV = (xrViews.at(CurrentEye).fov.angleUp - xrViews.at(CurrentEye).fov.angleDown) * 57.2958f;
             info("The screen aspect ratio of an HMD eye is " + std::to_string(RATIO));
-            SaveConfig();
+            saveConfig();
             info("Saved the new config! You may restart the game now.");
             info("You can try unloading the mod by pressing the END key on your keyboard. This will sometimes crash the game but you might as well try if restarting anyway.");
-            Reconfig = false;
+            doReconfig = false;
         }
+
+        // Get the headset transform
 
         const auto [q1, q2, q3, q0] = xrViews.at(CurrentEye).pose.orientation;
         const auto [lx, ly, lz] = xrViews.at(CurrentEye).pose.position;
-        FOV = (xrViews.at(CurrentEye).fov.angleUp - xrViews.at(CurrentEye).fov.angleDown) * 57.2958f * RATIO;
 
-        Vec3 HMDPosition;
+        // Transform scale
+        float size = 1.f;
 
-        float scale = 1.f;
+        Vec3 HMDLoc;
+        HMDLoc.x = lx;
+        HMDLoc.y = ly;
+        HMDLoc.z = lz;
+        HMDLoc = HMDLoc * Vec3(size, size, size);
 
-        HMDPosition.x = lx * scale;
-        HMDPosition.y = ly * scale;
-        HMDPosition.z = lz * scale;
+        Vec4 HMDQuat;
+        HMDQuat.w = q0;
+        HMDQuat.x = q1;
+        HMDQuat.y = q2;
+        HMDQuat.z = q3;
+        Vec3 HMDEuler = eulerFromQuat(HMDQuat);
 
-        Matrix4 HMDPose;
+        Matrix4 HMDMat;
 
-        HMDPose[0] = 2 * (q0 * q0 + q1 * q1) - 1;
-        HMDPose[1] = 2 * (q1 * q2 - q0 * q3);
-        HMDPose[2] = 2 * (q1 * q3 + q0 * q2);
-        HMDPose[3] = 0;
+        HMDMat.x.x = 2 * (q0 * q0 + q1 * q1) - 1;
+        HMDMat.y.x = 2 * (q1 * q2 - q0 * q3);
+        HMDMat.z.x = 2 * (q1 * q3 + q0 * q2);
+        HMDMat.o.x = 0;
 
-        HMDPose[4] = 2 * (q1 * q2 + q0 * q3);
-        HMDPose[5] = 2 * (q0 * q0 + q2 * q2) - 1;
-        HMDPose[6] = 2 * (q2 * q3 - q0 * q1);
-        HMDPose[7] = 0;
+        HMDMat.x.y = 2 * (q1 * q2 + q0 * q3);
+        HMDMat.y.y = 2 * (q0 * q0 + q2 * q2) - 1;
+        HMDMat.z.y = 2 * (q2 * q3 - q0 * q1);
+        HMDMat.o.y = 0;
 
-        HMDPose[8] = 2 * (q1 * q3 - q0 * q2);
-        HMDPose[9] = 2 * (q2 * q3 + q0 * q1);
-        HMDPose[10] = 2 * (q0 * q0 + q3 * q3) - 1;
-        HMDPose[11] = 0;
+        HMDMat.x.z = 2 * (q1 * q3 - q0 * q2);
+        HMDMat.y.z = 2 * (q2 * q3 + q0 * q1);
+        HMDMat.z.z = 2 * (q0 * q0 + q3 * q3) - 1;
+        HMDMat.o.z = 0;
 
-        HMDPose[12] = 0;
-        HMDPose[13] = 0;
-        HMDPose[14] = 0;
-        HMDPose[15] = 1;
+        HMDMat.x.w = 0;
+        HMDMat.y.w = 0;
+        HMDMat.x.w = 0;
+        HMDMat.o.w = 1;
 
-        const auto [hq1, hq2, hq3, hq0] = hand_locations[1].pose.orientation;
-        const auto [hlx, hly, hlz] = hand_locations[1].pose.position;
-        Vec3 aimLoc;
-        aimLoc.x = hlx;
-        aimLoc.y = hly;
-        aimLoc.z = hlz;
+        // Get the right hand transform
+
+        const auto [hq1, hq2, hq3, hq0] = handLocations[1].pose.orientation;
+        const auto [hlx, hly, hlz] = handLocations[1].pose.position;
+
 
         Vec4 hudQuat;
-        Vec4 aimQuat;
-        Vec4 lookQuat;
-
         hudQuat.w = q0;
         hudQuat.x = q1;
         hudQuat.y = q2;
         hudQuat.z = q3;
 
-        if (grab_value[1].currentState > 0.5f)
+        if (grabValue[1].currentState > 0.5f)
         {
 
-            if (!Firing)
-            {
-                Firing = true;
-            }
+            if (!isFiring)
+                isFiring = true;
         }
 
-        if (Firing)
+        if (isFiring)
         {
             // If the trigger is down, quickly point the gun at its direction
 
@@ -825,33 +874,57 @@ namespace BF2VR {
                 hudQuat.z = hq3;
             }
         }
+        Vec3 hudEuler = eulerFromQuat(hudQuat);
 
-        lookQuat.w = q0;
-        lookQuat.x = q1;
-        lookQuat.y = q2;
-        lookQuat.z = q3;
 
+        Vec3 aimLoc;
+        aimLoc.x = hlx;
+        aimLoc.y = hly;
+        aimLoc.z = hlz;
+        aimLoc = aimLoc * Vec3(size, size, size);
+
+        Vec4 aimQuat;
         aimQuat.w = hq0;
         aimQuat.x = hq1;
         aimQuat.y = hq2;
         aimQuat.z = hq3;
+        Vec3 aimEuler = eulerFromQuat(aimQuat);
 
-
-        Vec3 hudEuler = EulerFromQuat(hudQuat);
-        Vec3 aimEuler = EulerFromQuat(aimQuat);
-        Vec3 lookEuler = EulerFromQuat(lookQuat);
-
-        float yaw = -hudEuler.x;
-        
+        float yaw = -hudEuler.y;
         float pitch = hudEuler.z;
 
-        GameService::UpdateCamera(HMDPosition, HMDPose, yaw, pitch, aimLoc, aimQuat);
 
-        float speed = 1.3;
-        DirectXService::crosshairX = (-aimEuler.x + lookEuler.x) * speed;
-        DirectXService::crosshairY = (aimEuler.z - lookEuler.z) * speed;
+        // Relative aim location in frostbite units
+        Vec3 fbAimLoc = aimLoc - HMDLoc;
 
-        if (!grab_value[1].currentState > 0.5f && Firing)
+        Vec3 relAimLoc = rotateAround(aimLoc, HMDLoc, HMDEuler.y);
+
+        fbAimLoc.x = relAimLoc.y - 0.5f; // Up down
+        fbAimLoc.y = relAimLoc.x;
+        fbAimLoc.z = -relAimLoc.z;
+
+        float handSpeed = 0.5f;
+        fbAimLoc = fbAimLoc * Vec3(handSpeed, handSpeed, handSpeed);
+
+
+        Vec4 fbAimQuat;
+        fbAimQuat.x = aimQuat.y;
+        fbAimQuat.y = aimQuat.x;
+        fbAimQuat.z = -aimQuat.z;
+        fbAimQuat.w = aimQuat.w;
+
+        float angle = 90.f;
+        Vec4 correctiveRotation = Vec4(0, 0, sin(angle), cos(angle));
+        fbAimQuat = fbAimQuat.rotateByEuler(0, 0, -90);
+
+        
+        GameService::updateCamera(HMDLoc, HMDMat, yaw, pitch - 0.37);
+        GameService::updateBone("Wep_Root", fbAimLoc, fbAimQuat);
+
+        DirectXService::crosshairX = (-aimEuler.y + HMDEuler.y) * 1.3f;
+        DirectXService::crosshairY = (aimEuler.z - HMDEuler.z) * 1.3f - 0.5f;
+
+        if (!(grabValue[1].currentState > 0.5f) && isFiring)
         {
             // Set the hud back to the head
 
@@ -860,13 +933,20 @@ namespace BF2VR {
             hudQuat.y = q2;
             hudQuat.z = q3;
 
-            Firing = false;
+            isFiring = false;
         }
 
         return true;
     }
 
-    bool OpenXRService::EndFrame() {
+    bool OpenXRService::endFrame() {
+
+        if (stopping)
+        {
+            return true;
+        }
+
+
         XrCompositionLayerProjection xrLayerProj = { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
         xrLayerProj.space = xrAppSpace;
         xrLayerProj.viewCount = xrProjectionViewCount;
@@ -886,25 +966,37 @@ namespace BF2VR {
         return true;
     }
 
-    void OpenXRService::EndXR() {
+    void OpenXRService::endXR() {
+
+        XrResult xr = xrEndSession(xrSession);
+        if (xr != XR_SUCCESS) {
+            error("Failed to end OpenXR session. Error:" + std::to_string(xr));
+        }
 
         for (uint64_t i = 0; i < xrRTVs.at(0).size(); i++) {
             xrRTVs.at(0).at(i)->Release();
             xrRTVs.at(1).at(i)->Release();
         }
         for (uint32_t i = 0; i < xrViewCount; i++) {
-            if (xrSwapchains.at(i) != XR_NULL_HANDLE && xrDestroySwapchain(xrSwapchains.at(i)) != XR_SUCCESS) {
-                error("Failed to destroy OpenXR swapchain.");
+            xr = xrDestroySwapchain(xrSwapchains.at(i));
+            if (xr != XR_SUCCESS) {
+                error("Failed to destroy OpenXR swapchain. Error:" + std::to_string(xr));
             }
         }
-        if (xrAppSpace != XR_NULL_HANDLE && xrDestroySpace(xrAppSpace) != XR_SUCCESS) {
-            error("Failed to destroy OpenXR app space");
+        xr = xrDestroySpace(xrAppSpace);
+        if (xr != XR_SUCCESS) {
+            error("Failed to destroy OpenXR app space. Error:" + std::to_string(xr));
         }
-        if (xrSession != XR_NULL_HANDLE && xrDestroySession(xrSession) != XR_SUCCESS) {
-            error("Failed to destroy OpenXR session");
+
+        xr = xrDestroySession(xrSession);
+        if (xr != XR_SUCCESS) {
+            error("Failed to destroy OpenXR session. Error:" + std::to_string(xr));
         }
-        if (xrInstance != XR_NULL_HANDLE && xrDestroyInstance(xrInstance) != XR_SUCCESS) {
-            error("Failed to destroy OpenXR instance");
+
+        xr = xrDestroyInstance(xrInstance);
+        if (xr != XR_SUCCESS) {
+            error("Failed to destroy OpenXR instance. Error:" + std::to_string(xr));
         }
+
     }
 }

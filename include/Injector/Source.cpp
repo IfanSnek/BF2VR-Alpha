@@ -5,13 +5,17 @@
 #include <sstream>
 #include <shlobj.h>
 #include "resource.h"
+#include <Xinput.h>
+
 #pragma comment(lib, "Shlwapi.lib")
+#pragma comment(lib, "xinput.lib")
 
 using namespace std;
 
 
 int inject()
 {
+
 	// Get the DLL file path
 	char buffer[MAX_PATH];
 	GetModuleFileNameA(NULL, buffer, MAX_PATH);
@@ -113,7 +117,7 @@ int inject()
 
 void reinstall()
 {
-	cout << "Reinstalling. You will need to find the folder where Battlefront is installed. Press enter to continue." << endl;
+	cout << "Reinstalling. You will need to find the folder where Battlefront is installed. You may paste the path into the field at the next step. Press enter to continue." << endl;
 
 	for (;;)
 	{
@@ -148,8 +152,23 @@ void reinstall()
 			path += "\\openxr_loader.dll";
 			if (!PathFileExists(std::wstring(path.begin(), path.end()).c_str()))
 			{
+				cerr << "openxr_loader.dll is not in the directory. Press enter to close." << endl;
 				Sleep(500);
-				cerr << "openxr_loader.dll is not in the directory. Press enter to close" << endl;
+				for (;;)
+				{
+					if (GetAsyncKeyState(VK_RETURN)) {
+						return;
+					}
+				}
+			}
+
+			std::string path2 = std::string(buffer).substr(0, pos);
+			path2 += "\\starwarsbattlefrontii.exe";
+
+			if (PathFileExists(std::wstring(path2.begin(), path2.end()).c_str()))
+			{
+				cerr << "Please move the mod into it's own folder.. Press enter to close." << endl;
+				Sleep(500);
 				for (;;)
 				{
 					if (GetAsyncKeyState(VK_RETURN)) {
@@ -250,7 +269,7 @@ $$$$$$$  |$$ |      $$$$$$$$\    \$  /   $$ |  $$ |
 			Sleep(300);
 			if (inject() == 0)
 			{
-				cout << "Injected! If you need to reinject, press F1 within 10 seconds of injection" << endl;
+				cout << "Injected! If you need to reinject, press F1 then Enter within 10 seconds of injection" << endl;
 				Sleep(300);
 				bool pressed = false;
 				for (int i = 0; i < 500; i++)

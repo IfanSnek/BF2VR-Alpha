@@ -10,44 +10,38 @@
 namespace BF2VR {
 	class DirectXService {
 	public:
-		static inline bool FrameBegan = false;
-		static inline bool FrameRendered = false;
-		static inline bool DoPresent = true;
+		static inline bool xrFrameBegan = false;
+		static inline bool xrFrameRendered = false;
+		static inline bool shouldPresent = true;
 
 		static inline ID3D11Device* pDevice = nullptr;
 		static inline ID3D11DeviceContext* pContext;
-		static inline ID3D11Texture2D* CurrentFrame;
+		static inline ID3D11Texture2D* pFrame;
 
 		static inline bool shadersCreated = false;
-		static inline ID3D11VertexShader* VertexShader = nullptr;
-		static inline ID3D11PixelShader* PixelShader = nullptr;
+		static inline ID3D11VertexShader* pVertexShader = nullptr;
+		static inline ID3D11PixelShader* pPixelShader = nullptr;
 		static inline bool srvCreated = false;
-		static inline ID3D11ShaderResourceView* srv = nullptr;
-		static inline ID3D11Texture2D* copy = nullptr;
+		static inline ID3D11ShaderResourceView* pSRV = nullptr;
+		static inline ID3D11Texture2D* pFrameCopy = nullptr;
 
 		static inline float crosshairX = 0;
 		static inline float crosshairY = 0;
 
-		static bool HookDirectX(HWND window);
-		static void UnhookDirectX();
-		static void RenderOverlays(ID3D11Device* device, ID3D11DeviceContext* context);
-		static bool RenderXRFrame(ID3D11Texture2D* texture, ID3D11RenderTargetView* rtv);
+		static bool hookDirectX(HWND window);
+		static void unhookDirectX();
+		static void renderOverlays(ID3D11Device* pDevice, ID3D11DeviceContext* pContext);
+		static bool renderXRFrame(ID3D11Texture2D* pTexture, ID3D11RenderTargetView* pRTV);
 
 
 	private:
-
 		typedef HRESULT(Present)(IDXGISwapChain* pInstance, UINT SyncInterval, UINT Flags);
-		static Present PresentDetour;
-		static inline Present* PresentTarget = nullptr;
-		static inline Present* PresentOriginal = nullptr;
+		static Present presentDetour;
+		static inline Present* pPresentTarget = nullptr;
+		static inline Present* pPresentOriginal = nullptr;
 
-		static inline std::unique_ptr<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>> m_batch;
-		static inline std::unique_ptr<DirectX::BasicEffect> m_effect;
-		static inline ID3D11InputLayout* InputLayout;
-
-
-		struct EyeBuffer {
-			bool leftEye;
-		};
+		static inline std::unique_ptr<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>> batch;
+		static inline std::unique_ptr<DirectX::BasicEffect> effect;
+		static inline ID3D11InputLayout* pInputLayout;
 	};
 }

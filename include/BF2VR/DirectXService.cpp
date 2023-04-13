@@ -8,75 +8,77 @@
 #include "../../third-party/DirectXTK/SimpleMath.h"
 
 namespace BF2VR {
-    class OpenXRService;
 
-    HRESULT DirectXService::PresentDetour(IDXGISwapChain* pInstance, UINT SyncInterval, UINT Flags)
+    HRESULT DirectXService::presentDetour(IDXGISwapChain* pInstance, UINT SyncInterval, UINT Flags)
     {
         HRESULT result = S_OK;
 
-        if (DoPresent)
+        if (shouldPresent)
         {
-            if (!OpenXRService::VRReady && pDevice == nullptr)
+            if (!OpenXRService::isVRReady && pDevice == nullptr)
             {
-                ID3D11Device* device;
-                ID3D11DeviceContext* context;
-                pInstance->GetDevice(__uuidof(device), reinterpret_cast<PVOID*>(&device));
-                device->GetImmediateContext(&context);
+                ID3D11Device* pDummyDevice;
+                ID3D11DeviceContext* pDummyContext;
+                pInstance->GetDevice(__uuidof(pDummyDevice), reinterpret_cast<PVOID*>(&pDummyDevice));
+                pDummyDevice->GetImmediateContext(&pDummyContext);
 
-                pDevice = device;
-                pContext = context;
+                pDevice = pDummyDevice;
+                pContext = pDummyContext;
 
                 log("Attempting to finalize OpenXR session ...");
-                if (!OpenXRService::BeginXRSession(pDevice)) {
+                if (!OpenXRService::beginXRSession(pDevice)) {
                     error("Unable to begin session.");
-                    Shutdown();
+                    shutdown();
                 } else {
                     success("Finalized OpenXR.");
                 }
             }
 
-            if (OpenXRService::VRReady) {
+            if (OpenXRService::isVRReady) {
 
-                if (OpenXRService::LeftEye) {
+                if (OpenXRService::onLeftEye) {
 
                     Vec3 hmd_location;
                     Vec4 hmd_quatrotation;
                     Matrix4 hmd_transformationmatrix{};
 
-                    if (!OpenXRService::BeginFrameAndGetVectors(hmd_location, hmd_quatrotation, hmd_transformationmatrix)) {
+                    if (!OpenXRService::beginFrameAndGetVectors(hmd_location, hmd_quatrotation, hmd_transformationmatrix)) {
                         warn("Did not begin a frame");
                     }
 
-                    OpenXRService::UpdateActions();
+                    OpenXRService::updateActions();
+                    OpenXRService::updatePoses();
                 }
+
 
                 // Get the color buffer from the screen
-                HRESULT hr = pInstance->GetBuffer(0, IID_PPV_ARGS(&CurrentFrame));
+                HRESULT hr = pInstance->GetBuffer(0, IID_PPV_ARGS(&pFrame));
                 if (SUCCEEDED(hr))
                 {
-                    OpenXRService::SubmitFrame(CurrentFrame);
+                    OpenXRService::submitFrame(pFrame);
                 }
 
-                if (!OpenXRService::LeftEye) {
+                if (!OpenXRService::onLeftEye) {
 
-                    OpenXRService::EndFrame();
+                    OpenXRService::endFrame();
                 }
 
                 // Switch eyes
-                OpenXRService::LeftEye = !OpenXRService::LeftEye;
+                OpenXRService::onLeftEye = !OpenXRService::onLeftEye;
 
                 
             }
         }
-        if (OpenXRService::LeftEye) {
-            return PresentOriginal(pInstance, SyncInterval, Flags);
+
+        if (OpenXRService::onLeftEye) {
+            return pPresentOriginal(pInstance, SyncInterval, Flags);
         }
         else {
             return S_OK;
         }
     }
 
-    bool DirectXService::HookDirectX(HWND window) {
+    bool DirectXService::hookDirectX(HWND window) {
 
         ID3D11Device* pDummyDevice;
         IDXGISwapChain* pDummySwapChain;
@@ -101,7 +103,7 @@ namespace BF2VR {
         if (FAILED(D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, 0, 0, &featureLevel, 1, D3D11_SDK_VERSION, &desc, &pDummySwapChain, &pDummyDevice, nullptr, &pDummyContext)))
         {
             error("Could not create dummy DirectX device.");
-            Shutdown();
+            shutdown();
             return false;
         }
 
@@ -109,14 +111,14 @@ namespace BF2VR {
         auto pTable = *reinterpret_cast<PVOID**>(pDummySwapChain);
 
         // Hook our dummy DirectX stuff into the real one
-        PresentTarget = reinterpret_cast<Present*>(pTable[8]);
-        MH_STATUS mh = MH_CreateHook(reinterpret_cast<LPVOID>(reinterpret_cast<DWORD64>(PresentTarget)), reinterpret_cast<LPVOID>(&PresentDetour), reinterpret_cast<LPVOID*>(&PresentOriginal));
+        pPresentTarget = reinterpret_cast<Present*>(pTable[8]);
+        MH_STATUS mh = MH_CreateHook(reinterpret_cast<LPVOID>(reinterpret_cast<DWORD64>(pPresentTarget)), reinterpret_cast<LPVOID>(&presentDetour), reinterpret_cast<LPVOID*>(&pPresentOriginal));
         if (mh != MH_OK) {
             error("Error hooking DirectX present. Error: " + std::to_string(mh));
             return false;
         }
 
-        mh = MH_EnableHook(reinterpret_cast<LPVOID>(reinterpret_cast<DWORD64>(PresentTarget)));
+        mh = MH_EnableHook(reinterpret_cast<LPVOID>(reinterpret_cast<DWORD64>(pPresentTarget)));
         if (mh != MH_OK) {
             error("Error enabling DirectX present hook. Error: " + std::to_string(mh));
             return false;
@@ -129,43 +131,43 @@ namespace BF2VR {
         return true;
     }
 
-    void DirectXService::UnhookDirectX() {
+    void DirectXService::unhookDirectX() {
 
-        MH_DisableHook(reinterpret_cast<LPVOID>(reinterpret_cast<DWORD64>(PresentTarget)));
-        MH_RemoveHook(reinterpret_cast<LPVOID>(reinterpret_cast<DWORD64>(PresentTarget)));
+        MH_DisableHook(reinterpret_cast<LPVOID>(pPresentTarget));
+        MH_RemoveHook(reinterpret_cast<LPVOID>(pPresentTarget));
 
         if (srvCreated)
         {
-            srv->Release();
+            pSRV->Release();
         }
         if (shadersCreated)
         {
-            VertexShader->Release();
-            PixelShader->Release();
+            pVertexShader->Release();
+            pPixelShader->Release();
         }
-        if (copy != nullptr)
+        if (pFrameCopy != nullptr)
         {
-           copy->Release();
+           pFrameCopy->Release();
         }
 
     }
 
-    void DirectXService::RenderOverlays(ID3D11Device* device, ID3D11DeviceContext* context) {
+    void DirectXService::renderOverlays(ID3D11Device* device, ID3D11DeviceContext* context) {
 
 
         // This uses some parts of DirectXTK
         // PrimitiveBatch
 
-        m_batch = std::make_unique<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>>(context);
+        batch = std::make_unique<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>>(context);
 
         // BasicEffect
-        m_effect.reset(new DirectX::BasicEffect(device));
-        m_effect->SetVertexColorEnabled(true);
+        effect.reset(new DirectX::BasicEffect(device));
+        effect->SetVertexColorEnabled(true);
 
         void const* shaderByteCode;
         size_t byteCodeLength;
 
-        m_effect->GetVertexShaderBytecode(&shaderByteCode, &byteCodeLength);
+        effect->GetVertexShaderBytecode(&shaderByteCode, &byteCodeLength);
 
         // Set InputLayout
         device->CreateInputLayout(
@@ -173,41 +175,41 @@ namespace BF2VR {
             DirectX::VertexPositionColor::InputElementCount,
             shaderByteCode,
             byteCodeLength,
-            &InputLayout);
+            &pInputLayout);
         
 
-        m_effect->SetView(DirectX::SimpleMath::Matrix::CreateLookAt(DirectX::SimpleMath::Vector3(0.f, 0.f, 1),
+        effect->SetView(DirectX::SimpleMath::Matrix::CreateLookAt(DirectX::SimpleMath::Vector3(0.f, 0.f, 1),
             DirectX::SimpleMath::Vector3::Zero, DirectX::SimpleMath::Vector3::UnitY));
 
 
-        m_effect->Apply(context);
-        context->IASetInputLayout(InputLayout);
+        effect->Apply(context);
+        context->IASetInputLayout(pInputLayout);
 
         // Actually draw the line
 
-        m_batch->Begin();
+        batch->Begin();
 
         float lineLength = 0.1f;
-        float shift = crosshairX;
+        float xOffset = crosshairX;
 
-        DirectX::VertexPositionColor v1(DirectX::SimpleMath::Vector3(shift - lineLength, crosshairY + 0.003f, 0), DirectX::Colors::Green);
-        DirectX::VertexPositionColor v2(DirectX::SimpleMath::Vector3(shift + lineLength, crosshairY + 0.003f, 0), DirectX::Colors::Green);
-        DirectX::VertexPositionColor v3(DirectX::SimpleMath::Vector3(shift - lineLength, crosshairY - 0.003f, 0), DirectX::Colors::Green);
-        DirectX::VertexPositionColor v4(DirectX::SimpleMath::Vector3(shift + lineLength, crosshairY - 0.003f, 0), DirectX::Colors::Green);
+        DirectX::VertexPositionColor v1(DirectX::SimpleMath::Vector3(xOffset - lineLength, crosshairY + 0.003f, 0), DirectX::Colors::Green);
+        DirectX::VertexPositionColor v2(DirectX::SimpleMath::Vector3(xOffset + lineLength, crosshairY + 0.003f, 0), DirectX::Colors::Green);
+        DirectX::VertexPositionColor v3(DirectX::SimpleMath::Vector3(xOffset - lineLength, crosshairY - 0.003f, 0), DirectX::Colors::Green);
+        DirectX::VertexPositionColor v4(DirectX::SimpleMath::Vector3(xOffset + lineLength, crosshairY - 0.003f, 0), DirectX::Colors::Green);
 
-        m_batch->DrawQuad(v1, v2, v4, v3);
+        batch->DrawQuad(v1, v2, v4, v3);
 
-        DirectX::VertexPositionColor v5(DirectX::SimpleMath::Vector3(shift + 0.003f, -lineLength + crosshairY, 0), DirectX::Colors::Green);
-        DirectX::VertexPositionColor v6(DirectX::SimpleMath::Vector3(shift + 0.003f, lineLength + crosshairY, 0), DirectX::Colors::Green);
-        DirectX::VertexPositionColor v7(DirectX::SimpleMath::Vector3(shift - 0.003f, -lineLength + crosshairY, 0), DirectX::Colors::Green);
-        DirectX::VertexPositionColor v8(DirectX::SimpleMath::Vector3(shift - 0.003f, lineLength + crosshairY, 0), DirectX::Colors::Green);
+        DirectX::VertexPositionColor v5(DirectX::SimpleMath::Vector3(xOffset + 0.003f, -lineLength + crosshairY, 0), DirectX::Colors::Green);
+        DirectX::VertexPositionColor v6(DirectX::SimpleMath::Vector3(xOffset + 0.003f, lineLength + crosshairY, 0), DirectX::Colors::Green);
+        DirectX::VertexPositionColor v7(DirectX::SimpleMath::Vector3(xOffset - 0.003f, -lineLength + crosshairY, 0), DirectX::Colors::Green);
+        DirectX::VertexPositionColor v8(DirectX::SimpleMath::Vector3(xOffset - 0.003f, lineLength + crosshairY, 0), DirectX::Colors::Green);
 
-        m_batch->DrawQuad(v5,v6,v8,v7);
+        batch->DrawQuad(v5,v6,v8,v7);
 
-        m_batch->End();
+        batch->End();
     }
 
-    bool DirectXService::RenderXRFrame(ID3D11Texture2D* texture, ID3D11RenderTargetView* rtv)
+    bool DirectXService::renderXRFrame(ID3D11Texture2D* texture, ID3D11RenderTargetView* rtv)
     {
 
         ID3D11Device* device;
@@ -222,7 +224,7 @@ namespace BF2VR {
                 gPS,
                 ARRAYSIZE(gPS),
                 nullptr,
-                &PixelShader
+                &pPixelShader
             );
 
             if (FAILED(hr)) {
@@ -234,7 +236,7 @@ namespace BF2VR {
                 gVS,
                 ARRAYSIZE(gVS),
                 nullptr,
-                &VertexShader
+                &pVertexShader
             );
 
             if (FAILED(hr)) {
@@ -250,22 +252,22 @@ namespace BF2VR {
         // Invalidate the old srv if it changes
 
         srvCreated = true;
-        if (srv == nullptr) {
+        if (pSRV == nullptr) {
             srvCreated = false;
             info("Invalidated SRV, regenerating.");
         }
         else {
             D3D11_TEXTURE2D_DESC sourceDesc;
-            CurrentFrame->GetDesc(&sourceDesc);
+            pFrame->GetDesc(&sourceDesc);
             D3D11_TEXTURE2D_DESC copyDesc;
-            copy->GetDesc(&copyDesc);
+            pFrameCopy->GetDesc(&copyDesc);
             if (copyDesc.Format != sourceDesc.Format
                 || copyDesc.Width != sourceDesc.Width
                 || copyDesc.Height != sourceDesc.Height) {
                 srvCreated = false;
                 info("Invalidated SRV, regenerating.");
-                srv->Release();
-                copy->Release();
+                pSRV->Release();
+                pFrameCopy->Release();
             }
         }
 
@@ -273,9 +275,9 @@ namespace BF2VR {
         if (!srvCreated)
         {
             D3D11_TEXTURE2D_DESC textureDesc;
-            CurrentFrame->GetDesc(&textureDesc);
+            pFrame->GetDesc(&textureDesc);
             textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-            HRESULT hr = device->CreateTexture2D(&textureDesc, nullptr, &copy);
+            HRESULT hr = device->CreateTexture2D(&textureDesc, nullptr, &pFrameCopy);
             if (FAILED(hr))
             {
                 warn("Failed to copy texture");
@@ -287,7 +289,7 @@ namespace BF2VR {
             srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
             srvDesc.Texture2D.MipLevels = 1;
             srvDesc.Texture2D.MostDetailedMip = 0;
-            hr = device->CreateShaderResourceView(copy, &srvDesc, &srv);
+            hr = device->CreateShaderResourceView(pFrameCopy, &srvDesc, &pSRV);
             if (FAILED(hr))
             {
                 warn("Failed to create shader resource view");
@@ -299,18 +301,18 @@ namespace BF2VR {
 
         // Finally, draw.
 
-        context->CopyResource(copy, CurrentFrame);
+        context->CopyResource(pFrameCopy, pFrame);
         context->IASetVertexBuffers(0, 0, nullptr, nullptr, nullptr);
         context->IASetIndexBuffer(nullptr, static_cast<DXGI_FORMAT>(0), 0);
         context->IASetInputLayout(nullptr);
         context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        context->VSSetShader(VertexShader, nullptr, 0);
-        context->PSSetShader(PixelShader, nullptr, 0);
+        context->VSSetShader(pVertexShader, nullptr, 0);
+        context->PSSetShader(pPixelShader, nullptr, 0);
         context->OMSetRenderTargets(1, &rtv, nullptr);
-        context->PSSetShaderResources(0, 1, &srv);
+        context->PSSetShaderResources(0, 1, &pSRV);
         context->Draw(3, 0);
 
-        RenderOverlays(device, context);
+        renderOverlays(device, context);
 
         context->Release();
         device->Release();

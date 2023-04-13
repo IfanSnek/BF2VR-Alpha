@@ -22,25 +22,28 @@ namespace BF2VR {
 		static inline std::vector<XrSwapchain> xrSwapchains;
 		static inline std::map<uint32_t, std::vector<ID3D11RenderTargetView*>> xrRTVs;
 
-		static inline int EyeWidth;
-		static inline int EyeHeight;
+		static inline int eyeWidth;
+		static inline int eyeHeight;
 
-		static inline bool LeftEye = true;
-		static inline bool VRReady = false;
+		static inline bool onLeftEye = true;
+		static inline bool isVRReady = false;
 
-		static inline bool Firing = false;
-		static inline bool Menu = true;
-		static inline bool pressingMenu = false;
+		static inline bool isFiring = false;
+		static inline bool showUI = true;
+		static inline bool isPressingMenu = false;
 
-		static bool CreateXRInstanceWithExtensions();
-		static bool BeginXRSession(ID3D11Device* device);
-		static bool PrepareActions();
-		static bool BeginFrameAndGetVectors(Vec3& Loc, Vec4& Rot, Matrix4 outMatrix);
-		static bool SubmitFrame(ID3D11Texture2D* texture);
-		static bool UpdateActions();
-		static bool UpdatePoses();
-		static bool EndFrame();
-		static void EndXR();
+		static inline bool shouldStop = false;
+		static inline bool stopping = false;
+
+		static bool createXRInstanceWithExtensions();
+		static bool beginXRSession(ID3D11Device* pDevice);
+		static bool prepareActions();
+		static bool beginFrameAndGetVectors(Vec3& outHeadLoc, Vec4& outHeadRot, Matrix4 outHeadMatrix);
+		static bool submitFrame(ID3D11Texture2D* pTexture);
+		static bool updateActions();
+		static bool updatePoses();
+		static bool endFrame();
+		static void endXR();
 
 	private:
 
@@ -75,17 +78,17 @@ namespace BF2VR {
 		static inline XrAction jumpAction;
 		static inline XrAction reloadAction;
 
-		static inline XrSpace pose_action_spaces[2];
+		static inline XrSpace poseActionSpaces[2];
 
 		// Action values
-		static inline XrSpaceLocation hand_locations[2];
-		static inline XrActionStateFloat grab_value[2];
-		static inline XrActionStateFloat grip_value[2];
-		static inline XrActionStateBoolean menu_value;
-		static inline XrActionStateVector2f walk_value;
-		static inline XrActionStateBoolean roll_value;
-		static inline XrActionStateBoolean jump_value;
-		static inline XrActionStateBoolean reload_value;
+		static inline XrSpaceLocation handLocations[2];
+		static inline XrActionStateFloat grabValue[2];
+		static inline XrActionStateFloat gripValue[2];
+		static inline XrActionStateBoolean menuValue;
+		static inline XrActionStateVector2f walkValue;
+		static inline XrActionStateBoolean rollValue;
+		static inline XrActionStateBoolean jumpValue;
+		static inline XrActionStateBoolean reloadValue;
 
 		// BeginFrameAndGetVectors
 		static inline XrFrameState xrFrameState = {};
