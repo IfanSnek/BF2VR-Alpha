@@ -117,7 +117,7 @@ int inject()
 
 void reinstall()
 {
-	cout << "Reinstalling. You will need to find the folder where Battlefront is installed. Press enter to continue." << endl;
+	cout << "Reinstalling. You will need to find the folder where Battlefront is installed. You may paste the path into the field at the next step. Press enter to continue." << endl;
 
 	for (;;)
 	{
