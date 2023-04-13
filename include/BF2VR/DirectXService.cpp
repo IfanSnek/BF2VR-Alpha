@@ -69,6 +69,7 @@ namespace BF2VR {
                 
             }
         }
+
         if (OpenXRService::onLeftEye) {
             return pPresentOriginal(pInstance, SyncInterval, Flags);
         }

@@ -210,57 +210,56 @@ namespace BF2VR {
     }
 
 
-    __int64 GameService::poseUpdateDetour(int a1, int a2, int a3, int a4, __int64 a5)
+    __int64 __fastcall GameService::poseUpdateDetour(int a1, int a2, int a3, int a4, __int64 a5)
     {
         __int64 toReturn = poseUpdateOriginal(a1, a2, a3, a4, a5);
 
-        if (isPosing)
+        if (!isPosing)
         {
-            deb("glitch");
-            return toReturn;
+            isPosing = true;
+            applyBones();
+            isPosing = false;
         }
 
-        isPosing = true;
+        return toReturn;
+    }
 
+    bool GameService::applyBones()
+    {
         GameContext* CurrentContext = GameContext::GetInstance();
         if (!isValidPtr(CurrentContext)) {
-            isPosing = false;
-            return toReturn;
+            return false;
         }
 
         PlayerManager* playerManager = CurrentContext->playerManager;
         if (!isValidPtr(playerManager)) {
-            isPosing = false;
-            return toReturn;
+            return false;
         }
 
         ClientPlayer* player = playerManager->LocalPlayer;
         if (!isValidPtr(player)) {
-            isPosing = false;
-            return toReturn;
+            return false;
         }
 
         ClientSoldierEntity* soldier = player->controlledControllable;
         if (!isValidPtr(soldier)) {
-            isPosing = false;
-            return toReturn;
+            return false;
         }
 
         ClientBoneCollisionComponent* bones = GetClassFromName<ClientBoneCollisionComponent*>(soldier, "ClientBoneCollisionComponent");
 
         if (!isValidPtr(bones)) {
             warn("Could not find bones. 6dof hands will not work.");
-            isPosing = false;
-            return toReturn;
+            return false;
         }
 
         BasicSkeleton skeleton = BasicSkeleton(bones);
         if (!skeleton.valid)
         {
             warn("Could not find the skeleton. 6dof hands will not work.");
-            isPosing = false;
-            return toReturn;
+            return false;
         }
+
 
         for (boneState state : boneStates)
         {
@@ -270,8 +269,7 @@ namespace BF2VR {
             }
         }
 
-        isPosing = false;
-        return toReturn;
+        return true;
     }
 
 

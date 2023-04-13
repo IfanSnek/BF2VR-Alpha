@@ -93,7 +93,7 @@ DWORD __stdcall mainThread(HMODULE module)
 
 
     for (;;) {
-        Sleep(60);
+        Sleep(500);
         if (GetAsyncKeyState(VK_END)) {
             shutdown();
             return 0;

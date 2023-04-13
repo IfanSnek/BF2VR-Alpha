@@ -619,10 +619,12 @@ namespace BF2VR {
             warn("Failed to sync actions. Skipping motion controls this frame. Error: " + std::to_string(xr));
             return false;
         }
+        /*
         else if (xr == XR_SESSION_NOT_FOCUSED)
         {
             warn("Mod has no focus. Please return to the game.");
         }
+        */
 
         // Get hand poses
 
@@ -897,11 +899,11 @@ namespace BF2VR {
 
         Vec3 relAimLoc = rotateAround(aimLoc, HMDLoc, HMDEuler.y);
 
-        fbAimLoc.x = relAimLoc.y; // Up down
+        fbAimLoc.x = relAimLoc.y - 0.5f; // Up down
         fbAimLoc.y = relAimLoc.x;
         fbAimLoc.z = -relAimLoc.z;
 
-        float handSpeed = 0.3f;
+        float handSpeed = 0.5f;
         fbAimLoc = fbAimLoc * Vec3(handSpeed, handSpeed, handSpeed);
 
 
@@ -910,12 +912,17 @@ namespace BF2VR {
         fbAimQuat.y = aimQuat.x;
         fbAimQuat.z = -aimQuat.z;
         fbAimQuat.w = aimQuat.w;
+
+        float angle = 90.f;
+        Vec4 correctiveRotation = Vec4(0, 0, sin(angle), cos(angle));
+        fbAimQuat = fbAimQuat.rotateByEuler(0, 0, -90);
+
         
-        GameService::updateCamera(HMDLoc, HMDMat, yaw, pitch);
-        GameService::updateBone("Wep_Root", fbAimLoc, Vec4(0, 0, 0, 1));
+        GameService::updateCamera(HMDLoc, HMDMat, yaw, pitch - 0.37);
+        GameService::updateBone("Wep_Root", fbAimLoc, fbAimQuat);
 
         DirectXService::crosshairX = (-aimEuler.y + HMDEuler.y) * 1.3f;
-        DirectXService::crosshairY = (aimEuler.z - HMDEuler.z) * 1.3f;
+        DirectXService::crosshairY = (aimEuler.z - HMDEuler.z) * 1.3f - 0.5f;
 
         if (!(grabValue[1].currentState > 0.5f) && isFiring)
         {
@@ -933,6 +940,13 @@ namespace BF2VR {
     }
 
     bool OpenXRService::endFrame() {
+
+        if (stopping)
+        {
+            return true;
+        }
+
+
         XrCompositionLayerProjection xrLayerProj = { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
         xrLayerProj.space = xrAppSpace;
         xrLayerProj.viewCount = xrProjectionViewCount;

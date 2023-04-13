@@ -188,9 +188,6 @@ namespace BF2VR
         NOFOV = ini.getAs<bool>("Core", "ManualFOV", false);
         FOV = ini.getAs<float>("Core", "FOVOverride", 90.f);
 
-        deb(std::to_string(RATIO));
-        deb(std::to_string(FOV));
-
         success("Loaded Config.");
 
         // Prevent multi-triggering

@@ -46,6 +46,30 @@ struct Vec4 {
     float z;
     float w;
 
+    Vec4 rotateByEuler(float eulerX, float eulerY, float eulerZ) {
+        // Convert Euler angles to quaternion
+        Vec4 eulerQuat;
+        float cosX = cos(eulerX / 2);
+        float sinX = sin(eulerX / 2);
+        float cosY = cos(eulerY / 2);
+        float sinY = sin(eulerY / 2);
+        float cosZ = cos(eulerZ / 2);
+        float sinZ = sin(eulerZ / 2);
+        eulerQuat.w = cosX * cosY * cosZ + sinX * sinY * sinZ;
+        eulerQuat.x = sinX * cosY * cosZ - cosX * sinY * sinZ;
+        eulerQuat.y = cosX * sinY * cosZ + sinX * cosY * sinZ;
+        eulerQuat.z = cosX * cosY * sinZ - sinX * sinY * cosZ;
+
+        // Multiply original quaternion by Euler angle quaternion to apply rotation
+        Vec4 rotatedQuat;
+        rotatedQuat.w = w * eulerQuat.w - x * eulerQuat.x - y * eulerQuat.y - z * eulerQuat.z;
+        rotatedQuat.x = w * eulerQuat.x + x * eulerQuat.w + y * eulerQuat.z - z * eulerQuat.y;
+        rotatedQuat.y = w * eulerQuat.y - x * eulerQuat.z + y * eulerQuat.w + z * eulerQuat.x;
+        rotatedQuat.z = w * eulerQuat.z + x * eulerQuat.y - y * eulerQuat.x + z * eulerQuat.w;
+
+        return rotatedQuat;
+    }
+
     Vec4 operator*(Vec4 v2)
     {
         Vec4 v1 = Vec4(x, y, z, w);
@@ -81,6 +105,11 @@ struct Vec4 {
     Vec3 dropW()
     {
         return Vec3(x, y, z);
+    }
+
+    std::string toString()
+    {
+        return std::format("X={:.4f} Y={:.4f} Z={:.4f} W={:.4f}", x, y, z, w);
     }
 };
 

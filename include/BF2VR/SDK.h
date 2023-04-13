@@ -58,7 +58,6 @@ T GetClassFromName(void* addr, const char* name, SIZE_T classSize = 0x2000) {
 		if (*(byte*)pGetType == INSTR_JMP || *(byte*)pGetType == INSTR_LEA) {
 			void* pTypeInfo = nullptr;
 			if (*(byte*)pGetType == INSTR_JMP) {
-				//std::cout << std::hex << "rel:\t" << *(int32_t*)((DWORD64)pGetType + 1) << "\tRIP:\t" << (DWORD64)pGetType + 5 << std::endl;
 				pGetType = (void*)(*(int32_t*)((DWORD64)pGetType + 1) + (DWORD64)pGetType + 5);
 			}
 			if (*(byte*)pGetType == INSTR_LEA) {
@@ -465,7 +464,7 @@ public:
 		if (!boneRelative(boneId, &transfrom))
 			return false;
 
-		transfrom->Translation = transfrom->Translation + Vec4(location.x, location.y, location.z, 0);
+		transfrom->Translation = Vec4(location.x, location.y, location.z, 0);
 		if (rotation.x != 0 && rotation.y != 0 && rotation.z != 0 && rotation.w != 1)
 			transfrom->Quat = rotation;
 		transfrom->Scale = Vec4(scale.x, scale.y, scale.z, 0);
@@ -494,81 +493,14 @@ public:
 		if (!updateValidity())
 			return false;
 
-		if (strcmp(name, "Trajectory") == 0)
-		{
-			Vec3 rootLocation;
-			Vec4 rootRotation;
-			Vec3 rootScale;
-			if (!getBoneRelative("Trajectory", rootLocation, rootRotation, rootScale))
-				return false;
-			return poseBoneRelative("Trajectory", rootLocation, rotation, rootScale);
-		}
-
 		int boneId = boneIdFromName(name);
 		if (boneId == -1)
 			return false;
 
-		std::vector<int> indices;
-		if(!recursiveFindBone(boneId, indices))
-			return false;
-
-		Bone* bone = root;
-
-		Vec4 totalQuat = Vec4(0, 0, 0, 1);
-		Vec3 totalLoc = Vec3(0,0,0);
-
 		return poseBoneRelative(boneId, location, rotation, scale);
-
-		for (int index : indices)
-		{
-			bone = bone->children.at(index);
-
-			if (bone->id == boneId)
-			{
-				return poseBoneRelative(boneId, location + totalLoc, totalQuat * rotation, scale);
-			}
-
-			totalQuat = totalQuat * (Vec4(1, 1, 1, 1) / bone->originalTransfrom->Quat);
-			totalLoc = totalLoc - bone->originalTransfrom->Translation.dropW();
-
-		}
-
-		return false;
 	}
 
 private:
-	bool recursiveFindBone(int id, std::vector<int> &indices, int depth = 0)
-	{
-
-		// Indices is like directions through the skeleton. Find the latest turn
-		Bone* bone = root;
-		for (int index : indices)
-		{
-			bone = bone->children.at(index);
-		}
-
-		indices.push_back(0);
-		for (Bone* child : bone->children)
-		{
-			if (child->id == id)
-			{
-				return true;
-			}
-
-			if (recursiveFindBone(id, indices, depth + 1))
-				return true;
-			else if (indices.size() - 1 > depth)
-			{
-				// Trim scanned hiarches that went beyond curretn depth
-				indices.erase(indices.begin() + depth + 1, indices.end());
-			}
-
-			indices.at(depth) += 1;
-		}
-
-		return false;
-	}
-
 	bool addBone(const char* name, Bone* outBone, Bone* parent)
 	{
 		if (!updateValidity())
