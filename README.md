@@ -14,17 +14,8 @@ BF2VR is in early alpha, with frequent updates but limited features. Releases to
 
 # Using the mod
 ## Installation
-After downloading the latest zip file from the [releases channel](https://discord.com/channels/1046270181313351770/1047182227454300210), you will need to extract the files to some location on your drive. Some of the files will need to be moved to the Battlefront instalaltion folder. Your file layout should look like this:
+After downloading the latest zip file from the [releases channel](https://discord.com/channels/1046270181313351770/1047182227454300210), you will need to extract the files to some location on your drive. Read the REAME.txt for more directions.
 
-    STAR WARS Battlefront II/
-	 |      ...
-    ├─ starwarsbattlefrontii.exe
-    ├─ openxr_loader.dll
-     |     ...
-	
-    AlphaXYZ/
-    ├─ Launcher.exe
-    ├─ BF2VR.dll
 Note: Your antivirus may flag my mod, this is only because the injection technique is commonly used by malware to take over certain apps. In this case I only use it to take over the game, just to enable VR support. As long as you only downloaded the mod from my Discord server, you will be fine. You may have to add the AlphaXYZ folder to your antivirus exclusion list.
 
 ## First time setup
@@ -51,7 +42,7 @@ Because the mod is still being worked on, you may experience random errors and c
 
 ### Hotkeys
 * END: Attempts to eject the mod while keeping the game open. This often will crash
-* HOME: This will recenter the view. Press this if the perspective is wrong or movment is backwards.
+* HOME: This will reload the config.
 
 # Contributing
 This code is open source. Please read the licence if you want to fork. Contributions are welcome.
@@ -99,10 +90,7 @@ Attempts to shutdown the mod from a non-hooked state.
 Opens `config.txt` and loads its values to global variables. If the file doesn't exist, it will put the mod in autoconfig mode and want the user.
 
 * #### SaveConfig
-Saves certain global variables to `config.txt`
-
-* #### EulerFromQuat
-Calculates an euler vector from a quaternion.
+Saves certain global variables to `config.ini`
 
 ### dllmain
 When the mod is injected this first opens a console, logs the time, and finds the window. If this fails it will call `ShutdownNoHooks`. 
