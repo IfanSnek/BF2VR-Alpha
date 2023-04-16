@@ -123,8 +123,8 @@ namespace BF2VR {
             InputService::useRight = inVehicle;
 
             hmdMat.o.x += playerPosition.x;
-            hmdMat.o.y += playerPosition.y - heightOffset + 2;
-            hmdMat.o.z += playerPosition.z;// - 0.77f;
+            hmdMat.o.y += playerPosition.y - heightOffset + 2.f;
+            hmdMat.o.z += playerPosition.z;
 
             // Update the transform that the CameraHook will use
             cameraTransfrom = hmdMat;

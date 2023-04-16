@@ -44,6 +44,7 @@ namespace BF2VR {
 	inline bool doReconfig = false;
 	inline bool NOFOV = false;
 	inline bool HEADAIM = false;
+	inline bool NOROT = false;
 
 	const inline float PI = 3.14159265358979323846f;
 }

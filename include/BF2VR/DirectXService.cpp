@@ -47,9 +47,9 @@ namespace BF2VR {
                     }
 
                     OpenXRService::updateActions();
-                    OpenXRService::updatePoses();
                 }
 
+                OpenXRService::updatePoses();
 
                 // Get the color buffer from the screen
                 HRESULT hr = pInstance->GetBuffer(0, IID_PPV_ARGS(&pFrame));

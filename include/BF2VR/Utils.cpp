@@ -187,6 +187,7 @@ namespace BF2VR
         HEADAIM = ini.getAs<bool>("Core", "AimWithHead", false);
         NOFOV = ini.getAs<bool>("Core", "ManualFOV", false);
         FOV = ini.getAs<float>("Core", "FOVOverride", 90.f);
+        NOROT = ini.getAs<bool>("Core", "DisableRotation", false);
 
         success("Loaded Config.");
 

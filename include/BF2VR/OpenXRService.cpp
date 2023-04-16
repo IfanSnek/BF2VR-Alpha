@@ -788,7 +788,7 @@ namespace BF2VR {
     }
 
     bool OpenXRService::updatePoses() {
-        int CurrentEye = !onLeftEye;
+        int CurrentEye = onLeftEye;
 
         if (doReconfig) {
             RATIO = (xrViews.at(CurrentEye).fov.angleRight - xrViews.at(CurrentEye).fov.angleLeft) / (xrViews.at(CurrentEye).fov.angleUp - xrViews.at(CurrentEye).fov.angleDown);
@@ -806,13 +806,13 @@ namespace BF2VR {
         const auto [lx, ly, lz] = xrViews.at(CurrentEye).pose.position;
 
         // Transform scale
-        float size = 1.f;
+        float HMDScale = 1.f;
 
         Vec3 HMDLoc;
         HMDLoc.x = lx;
         HMDLoc.y = ly;
         HMDLoc.z = lz;
-        HMDLoc = HMDLoc * Vec3(size, size, size);
+        HMDLoc = HMDLoc * Vec3(HMDScale, HMDScale, HMDScale);
 
         Vec4 HMDQuat;
         HMDQuat.w = q0;
@@ -876,12 +876,10 @@ namespace BF2VR {
         }
         Vec3 hudEuler = eulerFromQuat(hudQuat);
 
-
         Vec3 aimLoc;
         aimLoc.x = hlx;
         aimLoc.y = hly;
         aimLoc.z = hlz;
-        aimLoc = aimLoc * Vec3(size, size, size);
 
         Vec4 aimQuat;
         aimQuat.w = hq0;
@@ -907,18 +905,21 @@ namespace BF2VR {
         fbAimLoc = fbAimLoc * Vec3(handSpeed, handSpeed, handSpeed);
 
 
-        Vec4 fbAimQuat;
-        fbAimQuat.x = aimQuat.y;
-        fbAimQuat.y = aimQuat.x;
-        fbAimQuat.z = -aimQuat.z;
-        fbAimQuat.w = aimQuat.w;
+        Vec4 fbAimQuat = Vec4(0, 0, 0, 1);
 
-        float angle = 90.f;
-        Vec4 correctiveRotation = Vec4(0, 0, sin(angle), cos(angle));
-        fbAimQuat = fbAimQuat.rotateByEuler(0, 0, -90);
+        if (!NOROT)
+        {
+            fbAimQuat.x = aimQuat.y;
+            fbAimQuat.y = aimQuat.x;
+            fbAimQuat.z = -aimQuat.z;
+            fbAimQuat.w = aimQuat.w;
 
-        
-        GameService::updateCamera(HMDLoc, HMDMat, yaw, pitch - 0.37);
+            float angle = 90.f;
+            Vec4 correctiveRotation = Vec4(0, 0, sin(angle), cos(angle));
+            fbAimQuat = fbAimQuat.rotateByEuler(0, 0, -90);
+        }
+
+        GameService::updateCamera(HMDLoc, HMDMat, yaw, pitch - 0.37f);
         GameService::updateBone("Wep_Root", fbAimLoc, fbAimQuat);
 
         DirectXService::crosshairX = (-aimEuler.y + HMDEuler.y) * 1.3f;
