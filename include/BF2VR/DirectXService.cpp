@@ -1,3 +1,16 @@
+// DirectXService.cpp - Code that interacts with the DirectX API, including hooks and rendering.
+// Copyright(C) 2023 Ethan Porcaro
+
+// This program is free software : you can redistribute itand /or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+
 #include "DirectXService.h"
 #include "PixelShader.h"
 #include "VertexShader.h"
@@ -98,6 +111,7 @@ namespace BF2VR {
         desc.OutputWindow = window;
         desc.Windowed = true;
         desc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+        desc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 
         // Create the dummy
         if (FAILED(D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, 0, 0, &featureLevel, 1, D3D11_SDK_VERSION, &desc, &pDummySwapChain, &pDummyDevice, nullptr, &pDummyContext)))

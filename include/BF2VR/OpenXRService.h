@@ -1,3 +1,16 @@
+// OpenXRService.h - Headers for the code that interacts with the OpenXR runtime.
+// Copyright(C) 2023 Ethan Porcaro
+
+// This program is free software : you can redistribute itand /or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+
 #pragma once
 
 #define XR_USE_GRAPHICS_API_D3D11
@@ -63,7 +76,7 @@ namespace BF2VR {
 		static inline std::array<XrPath, 2> handPaths;
 		static inline std::array<XrPath, 2> triggerPaths;
 		static inline std::array<XrPath, 2> gripPaths;
-		static inline XrPath menuPath;
+		static inline XrPath basicPath;
 		static inline XrPath walkPath;
 		static inline XrPath rollPath;
 		static inline XrPath jumpPath;
@@ -72,7 +85,7 @@ namespace BF2VR {
 		static inline XrAction poseAction;
 		static inline XrAction triggerAction;
 		static inline XrAction gripAction;
-		static inline XrAction menuAction;
+		static inline XrAction basicAction;
 		static inline XrAction walkAction;
 		static inline XrAction rollAction;
 		static inline XrAction jumpAction;
@@ -84,7 +97,7 @@ namespace BF2VR {
 		static inline XrSpaceLocation handLocations[2];
 		static inline XrActionStateFloat grabValue[2];
 		static inline XrActionStateFloat gripValue[2];
-		static inline XrActionStateBoolean menuValue;
+		static inline XrActionStateBoolean basicValue;
 		static inline XrActionStateVector2f walkValue;
 		static inline XrActionStateBoolean rollValue;
 		static inline XrActionStateBoolean jumpValue;

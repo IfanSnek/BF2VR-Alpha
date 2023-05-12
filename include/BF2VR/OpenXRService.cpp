@@ -1,3 +1,16 @@
+// OpenXRService.cpp - Code that interacts with the OpenXR runtime.
+// Copyright(C) 2023 Ethan Porcaro
+
+// This program is free software : you can redistribute itand /or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+
 #include "OpenXRService.h"
 #include "InputService.h"
 
@@ -291,17 +304,17 @@ namespace BF2VR {
         }
 
         // Menu click action
-        xrStringToPath(xrInstance, "/user/hand/left/input/menu/click", &menuPath);
+        xrStringToPath(xrInstance, "/user/hand/left/input/y/click", &basicPath);
         {
             XrActionCreateInfo actionInfo = { XR_TYPE_ACTION_CREATE_INFO };
             actionInfo.actionType = XR_ACTION_TYPE_BOOLEAN_INPUT;
             actionInfo.countSubactionPaths = 1;
             actionInfo.subactionPaths = &handPaths[0];
-            strcpy(actionInfo.actionName, "menu");
-            strcpy(actionInfo.localizedActionName, "Toggle Menu");
-            xr = xrCreateAction(actionSet, &actionInfo, &menuAction);
+            strcpy(actionInfo.actionName, "basic");
+            strcpy(actionInfo.localizedActionName, "Basic weapon");
+            xr = xrCreateAction(actionSet, &actionInfo, &basicAction);
             if (xr != XR_SUCCESS) {
-                warn("Failed to create pose action for menu, menu mode will not work. Error: " + std::to_string(xr));
+                warn("Failed to create pose action for basic weapon, this control will not work. Error: " + std::to_string(xr));
                 return false;
             }
         }
@@ -407,8 +420,8 @@ namespace BF2VR {
         binding.binding = gripPaths[1];
         bindings.push_back(binding);
 
-        binding.action = menuAction;
-        binding.binding = menuPath;
+        binding.action = basicAction;
+        binding.binding = basicPath;
         bindings.push_back(binding);
 
         binding.action = walkAction;
@@ -675,27 +688,16 @@ namespace BF2VR {
         }
 
         {
-            // Get menu button state
+            // Get basic weapon button state
 
-            menuValue.type = XR_TYPE_ACTION_STATE_BOOLEAN;
+            basicValue.type = XR_TYPE_ACTION_STATE_BOOLEAN;
 
             XrActionStateGetInfo getInfo = { XR_TYPE_ACTION_STATE_GET_INFO };
-            getInfo.action = menuAction;
+            getInfo.action = basicAction;
             getInfo.subactionPath = handPaths[0];
-            xr = xrGetActionStateBoolean(xrSession, &getInfo, &menuValue);
+            xr = xrGetActionStateBoolean(xrSession, &getInfo, &basicValue);
             if (xr != XR_SUCCESS) {
                 warn("Failed to get value for menu button. Error: " + std::to_string(xr));
-            }
-            if (menuValue.currentState && !isPressingMenu)
-            {
-                info("Toggled menu.");
-                isPressingMenu = true;
-                showUI = !showUI;
-                GameService::setUIDrawState(showUI);
-            }
-            if (!menuValue.currentState && isPressingMenu)
-            {
-                isPressingMenu = false;
             }
 
         }
@@ -775,6 +777,8 @@ namespace BF2VR {
             InputService::buttons = InputService::buttons | 0x2000;
         if (jumpValue.currentState)
             InputService::buttons = InputService::buttons | 0x1000;
+        if (basicValue.currentState)
+            InputService::buttons = InputService::buttons | 0x8000;
         if (reloadValue.currentState)
             InputService::buttons = InputService::buttons | 0x4000;
         if (gripValue[0].currentState > 0.8)
