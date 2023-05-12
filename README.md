@@ -106,4 +106,4 @@ It will then run an infinite loop, shutting down if the END key is presed.
 # Credits
 * [OpenGameCamera](https://github.com/coltonon/OpenGameCamera/)
 * Some help from [BattleDash](https://github.com/BattleDash)
-* My testers in my Discrod server
+* My testers in my Discord server
