@@ -133,7 +133,7 @@ namespace BF2VR
         DirectXService::shouldPresent = false;
 
         log("Unhooking Camera");
-        FOV = 0;
+        FOV = -1;
         MH_DisableHook((LPVOID)OFFSETCAMERA);
         MH_RemoveHook((LPVOID)OFFSETCAMERA);
 
