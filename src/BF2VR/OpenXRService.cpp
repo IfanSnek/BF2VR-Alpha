@@ -795,7 +795,6 @@ namespace BF2VR {
         int CurrentEye = onLeftEye;
 
         if (doReconfig) {
-            RATIO = (xrViews.at(CurrentEye).fov.angleRight - xrViews.at(CurrentEye).fov.angleLeft) / (xrViews.at(CurrentEye).fov.angleUp - xrViews.at(CurrentEye).fov.angleDown);
             FOV = (xrViews.at(CurrentEye).fov.angleUp - xrViews.at(CurrentEye).fov.angleDown) * 57.2958f;
             info("The screen aspect ratio of an HMD eye is " + std::to_string(RATIO));
             saveConfig();

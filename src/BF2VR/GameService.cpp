@@ -27,10 +27,15 @@ namespace BF2VR {
             a2->cameraTransform = cameraTransfrom;
         }
 
-        return cameraUpdateOriginal(a1, a2);
+        __int64 toReturn = cameraUpdateOriginal(a1, a2);
+
+        // Update render settings
+        GameRenderer::GetInstance()->renderView->aspectRatio = RATIO;
+
+        return toReturn;
     }
 
-    // Function to set the view of the game cameraaN
+    // Function to set the view of the game camera
     void GameService::updateCamera(Vec3 hmdLocation, Matrix4 hmdMat, float yaw, float pitch) {
         GameRenderer* pGameRenderer = GameRenderer::GetInstance();
         if (!isValidPtr(pGameRenderer))
@@ -225,7 +230,7 @@ namespace BF2VR {
     }
 
 
-    __int64 __fastcall GameService::poseUpdateDetour(int a1, int a2, int a3, int a4, __int64 a5)
+    __int64 GameService::poseUpdateDetour(int a1, int a2, int a3, int a4, __int64 a5)
     {
         __int64 toReturn = poseUpdateOriginal(a1, a2, a3, a4, a5);
 

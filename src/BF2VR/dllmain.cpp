@@ -50,9 +50,6 @@ DWORD __stdcall mainThread(HMODULE module)
 
     RECT desktop;
     GetWindowRect(ownWindow, &desktop);
-    MoveWindow(ownWindow, 0, 0, (int)(desktop.bottom * RATIO), desktop.bottom, false);
-
-    GetWindowRect(ownWindow, &desktop);
     OpenXRService::eyeWidth = desktop.right;
     OpenXRService::eyeHeight = desktop.bottom;
 

@@ -107,7 +107,16 @@ T GetClassFromName(void* addr, const char* name, SIZE_T classSize = 0x2000) {
 
 class RenderView {
 public:
-	Matrix4 transform;
+	Matrix4 transform; //0x0000
+	char pad_0040[112]; //0x0040
+	float FOV; //0x00B0
+	char pad_00B4[20]; //0x00B4
+	float nearPlane; //0x00C8
+	float farPlane; //0x00CC
+	float aspectRatio; //0x00D0
+	float orthoWidth; //0x00D4
+	float orthoHeight; //0x00D8
+
 };
 
 class CameraObject {
