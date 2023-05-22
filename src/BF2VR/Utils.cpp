@@ -120,7 +120,7 @@ namespace BF2VR
 
     // Shutdown and eject the mod.
     void shutdown() {
-        FOV = -1;
+        Sleep(100);
 
         log("Ending VR");
         OpenXRService::shouldStop = true;
@@ -130,6 +130,7 @@ namespace BF2VR
         
         OpenXRService::endXR();
 
+        FOV = -1;
         OpenXRService::isVRReady = false;
         DirectXService::shouldPresent = false;
 
@@ -185,7 +186,8 @@ namespace BF2VR
 
         RATIO = ini.getAs<float>("Core", "EyeAspectRatio", 1.f);
         HEADAIM = ini.getAs<bool>("Core", "AimWithHead", false);
-        FOVOverride = ini.getAs<float>("Core", "FOVOverride", 90.f);
+        FOVOverride = ini.getAs<float>("Core", "FOVOverride", -1.f);
+        ConvergeOverride = ini.getAs<int>("Core", "EyeConvergenceOverride", -1);
 
         success("Loaded Config.");
 
@@ -208,13 +210,7 @@ namespace BF2VR
 
         ini.create("Core");
 
-        ini.set("Core", "EyeAspectRatio", std::to_string(RATIO));
-
-        if (HEADAIM)
-            ini.set("Core", "AimWithHead", "true");
-
-        if (FOV != 90.f)
-            ini.set("Core", "FOVOverride", std::to_string(FOV));
+        // Does nothing for now
 
 
         ini.save("config.ini");

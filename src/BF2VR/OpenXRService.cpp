@@ -572,7 +572,10 @@ namespace BF2VR {
 
         int currentEye = !onLeftEye; // If the eye is left, Lefteye = 1, but the arrays have the left eye at position 1, index 0.
 
-        int offsetFactor = 200; // Convergence factor idk
+        int offsetFactor = (int)((xrViews.at(currentEye).fov.angleRight - xrViews.at(currentEye).fov.angleLeft) * 57.2958f * 2); // Convergence factor idk
+        if (ConvergeOverride > -1) {
+            offsetFactor = ConvergeOverride;
+        }
 
         xrProjectionViews.at(currentEye) = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
         xrProjectionViews.at(currentEye).pose = xrViews.at(currentEye).pose;
@@ -913,12 +916,14 @@ namespace BF2VR {
 
         Vec4 fbAimQuat = Vec4(0, 0, 0, 1);
 
+        /* Fix later
         fbAimQuat.x = aimQuat.y;
         fbAimQuat.y = aimQuat.x;
         fbAimQuat.z = -aimQuat.z;
         fbAimQuat.w = aimQuat.w;
 
         fbAimQuat = fbAimQuat.rotateByEuler(0, 0, -90);
+        */
 
         GameService::updateCamera(HMDLoc, HMDMat, yaw, pitch - 0.37f);
         GameService::updateBone("Wep_Root", fbAimLoc, fbAimQuat);
