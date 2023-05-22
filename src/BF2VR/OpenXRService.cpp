@@ -572,14 +572,19 @@ namespace BF2VR {
 
         int currentEye = !onLeftEye; // If the eye is left, Lefteye = 1, but the arrays have the left eye at position 1, index 0.
 
+        int offsetFactor = 200; // Convergence factor idk
+
         xrProjectionViews.at(currentEye) = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
         xrProjectionViews.at(currentEye).pose = xrViews.at(currentEye).pose;
         xrProjectionViews.at(currentEye).fov = xrViews.at(currentEye).fov;
         xrProjectionViews.at(currentEye).subImage.swapchain = xrSwapchains.at(currentEye);
-        xrProjectionViews.at(currentEye).subImage.imageRect.offset = {0, 0};
+        xrProjectionViews.at(currentEye).subImage.imageRect.offset = {
+            onLeftEye ? 0 : offsetFactor,
+            0
+        };
         xrProjectionViews.at(currentEye).subImage.imageRect.extent = {
-            static_cast<int32_t>(eyeWidth),
-            static_cast<int32_t>(eyeHeight)
+            eyeWidth - offsetFactor,
+            eyeHeight
         };
 
 
@@ -794,13 +799,11 @@ namespace BF2VR {
     bool OpenXRService::updatePoses() {
         int CurrentEye = onLeftEye;
 
-        if (doReconfig) {
+        // Set FOV stuff.
+        if (FOVOverride > -1) {
+            FOV = FOVOverride;
+        } else {
             FOV = (xrViews.at(CurrentEye).fov.angleUp - xrViews.at(CurrentEye).fov.angleDown) * 57.2958f;
-            info("The screen aspect ratio of an HMD eye is " + std::to_string(RATIO));
-            saveConfig();
-            info("Saved the new config! You may restart the game now.");
-            info("You can try unloading the mod by pressing the END key on your keyboard. This will sometimes crash the game but you might as well try if restarting anyway.");
-            doReconfig = false;
         }
 
         // Get the headset transform
@@ -910,17 +913,12 @@ namespace BF2VR {
 
         Vec4 fbAimQuat = Vec4(0, 0, 0, 1);
 
-        if (!NOROT)
-        {
-            fbAimQuat.x = aimQuat.y;
-            fbAimQuat.y = aimQuat.x;
-            fbAimQuat.z = -aimQuat.z;
-            fbAimQuat.w = aimQuat.w;
+        fbAimQuat.x = aimQuat.y;
+        fbAimQuat.y = aimQuat.x;
+        fbAimQuat.z = -aimQuat.z;
+        fbAimQuat.w = aimQuat.w;
 
-            float angle = 90.f;
-            Vec4 correctiveRotation = Vec4(0, 0, sin(angle), cos(angle));
-            fbAimQuat = fbAimQuat.rotateByEuler(0, 0, -90);
-        }
+        fbAimQuat = fbAimQuat.rotateByEuler(0, 0, -90);
 
         GameService::updateCamera(HMDLoc, HMDMat, yaw, pitch - 0.37f);
         GameService::updateBone("Wep_Root", fbAimLoc, fbAimQuat);

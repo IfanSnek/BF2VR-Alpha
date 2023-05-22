@@ -55,10 +55,8 @@ namespace BF2VR {
 
 	inline float RATIO = 1;
 	inline float FOV = 90.0f;
-	inline bool doReconfig = false;
-	inline bool NOFOV = false;
+	inline float FOVOverride = -1.f;
 	inline bool HEADAIM = false;
-	inline bool NOROT = false;
 
 	const inline float PI = 3.14159265358979323846f;
 }

@@ -31,7 +31,6 @@ namespace BF2VR {
 
         // Update render settings
         GameRenderer::GetInstance()->renderView->aspectRatio = RATIO;
-
         return toReturn;
     }
 
@@ -48,10 +47,7 @@ namespace BF2VR {
             return;
         }
 
-        if (!NOFOV)
-        {
-            pSettings->forceFov = FOV;
-        }
+        pSettings->forceFov = FOV;
 
         // Set location from HMD
         hmdMat.o.x = hmdLocation.x;

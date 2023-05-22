@@ -120,6 +120,7 @@ namespace BF2VR
 
     // Shutdown and eject the mod.
     void shutdown() {
+        FOV = -1;
 
         log("Ending VR");
         OpenXRService::shouldStop = true;
@@ -133,7 +134,6 @@ namespace BF2VR
         DirectXService::shouldPresent = false;
 
         log("Unhooking Camera");
-        FOV = -1;
         MH_DisableHook((LPVOID)OFFSETCAMERA);
         MH_RemoveHook((LPVOID)OFFSETCAMERA);
 
@@ -172,22 +172,8 @@ namespace BF2VR
 
         // Open config.txt and read it line by line, applying the values
 
-        std::ifstream Config("config.ini");
-
-        if (!Config)
-        {
-            info("##############################");
-            info("IMPORTANT NOTICE:");
-            info("No valid configuration has been found. The game will autoconfigure, but then you will need to restart the game. Please read the below logs:");
-            info("##############################");
-
-            doReconfig = true;
-            Config.close();
-            return;
-        }
-        else {
-            Config.close();
-        }
+        std::ofstream Config("config.ini", std::ios_base::app);
+        Config.close();
 
         // Set global parsing/saving options
         INI::PARSE_FLAGS = INI::PARSE_COMMENTS_ALL | INI::PARSE_COMMENTS_SLASH | INI::PARSE_COMMENTS_HASH;
@@ -199,9 +185,7 @@ namespace BF2VR
 
         RATIO = ini.getAs<float>("Core", "EyeAspectRatio", 1.f);
         HEADAIM = ini.getAs<bool>("Core", "AimWithHead", false);
-        NOFOV = ini.getAs<bool>("Core", "ManualFOV", false);
-        FOV = ini.getAs<float>("Core", "FOVOverride", 90.f);
-        NOROT = ini.getAs<bool>("Core", "DisableRotation", false);
+        FOVOverride = ini.getAs<float>("Core", "FOVOverride", 90.f);
 
         success("Loaded Config.");
 
@@ -225,9 +209,6 @@ namespace BF2VR
         ini.create("Core");
 
         ini.set("Core", "EyeAspectRatio", std::to_string(RATIO));
-
-        if (NOFOV)
-            ini.set("Core", "ManualFOV", "true");
 
         if (HEADAIM)
             ini.set("Core", "AimWithHead", "true");
