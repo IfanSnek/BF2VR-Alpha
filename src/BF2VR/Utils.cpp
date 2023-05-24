@@ -120,8 +120,6 @@ namespace BF2VR
 
     // Shutdown and eject the mod.
     void shutdown() {
-        Sleep(100);
-
         log("Ending VR");
         OpenXRService::shouldStop = true;
         while (!OpenXRService::stopping) {
@@ -129,10 +127,7 @@ namespace BF2VR
         }
         
         OpenXRService::endXR();
-
-        FOV = -1;
         OpenXRService::isVRReady = false;
-        DirectXService::shouldPresent = false;
 
         log("Unhooking Camera");
         MH_DisableHook((LPVOID)OFFSETCAMERA);
@@ -144,6 +139,23 @@ namespace BF2VR
 
         log("Unhooking DirectX");
         DirectXService::unhookDirectX();
+
+        // Reset override FOV
+        GameRenderer* pGameRenderer = GameRenderer::GetInstance();
+        if (!isValidPtr(pGameRenderer))
+        {
+            warn("Unable to restore FOV to default value.");
+        }
+        else {
+            GameRenderSettings* pSettings = pGameRenderer->gameRenderSettings;
+            if (!isValidPtr(pSettings))
+            {
+                warn("Unable to restore FOV to default value.");
+            }
+            else {
+                pSettings->forceFov = -1;
+            }
+        }
 
         log("Disconnecting ViGEm");
         InputService::disconnect();

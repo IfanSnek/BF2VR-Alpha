@@ -49,7 +49,7 @@ namespace BF2VR {
 		static inline bool stopping = false;
 
 		static bool createXRInstanceWithExtensions();
-		static bool beginXRSession(ID3D11Device* pDevice);
+		static bool beginXRSession();
 		static bool prepareActions();
 		static bool beginFrame();
 		static bool submitFrame(ID3D11Texture2D* pTexture);
@@ -69,6 +69,9 @@ namespace BF2VR {
 		static inline uint32_t xrViewCount = 0;
 		static inline std::vector<XrViewConfigurationView> xrConfigViews;
 		static inline std::vector<XrView> xrViews;
+		static inline XrFrameState xrFrameState = {};
+		static inline uint32_t xrProjectionViewCount = 0;
+		static inline std::vector<XrCompositionLayerProjectionView> xrProjectionViews;
 
 		// PrepareActions
 		static inline XrActionSet actionSet;
@@ -102,10 +105,5 @@ namespace BF2VR {
 		static inline XrActionStateBoolean rollValue;
 		static inline XrActionStateBoolean jumpValue;
 		static inline XrActionStateBoolean reloadValue;
-
-		// BeginFrameAndGetVectors
-		static inline XrFrameState xrFrameState = {};
-		static inline uint32_t xrProjectionViewCount = 0;
-		static inline std::vector<XrCompositionLayerProjectionView> xrProjectionViews;
 	};
 }

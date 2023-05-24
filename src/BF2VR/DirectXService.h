@@ -25,10 +25,9 @@ namespace BF2VR {
 	public:
 		static inline bool xrFrameBegan = false;
 		static inline bool xrFrameRendered = false;
-		static inline bool shouldPresent = true;
 
 		static inline ID3D11Device* pDevice = nullptr;
-		static inline ID3D11DeviceContext* pContext;
+		static inline ID3D11DeviceContext* pContext = nullptr;
 		static inline ID3D11Texture2D* pFrame;
 
 		static inline bool shadersCreated = false;
@@ -41,9 +40,9 @@ namespace BF2VR {
 		static inline float crosshairX = 0;
 		static inline float crosshairY = 0;
 
-		static bool hookDirectX(HWND window);
+		static bool hookDirectX();
 		static void unhookDirectX();
-		static void renderOverlays(ID3D11Device* pDevice, ID3D11DeviceContext* pContext);
+		static void renderOverlays();
 		static bool renderXRFrame(ID3D11Texture2D* pTexture, ID3D11RenderTargetView* pRTV);
 
 

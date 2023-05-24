@@ -44,32 +44,30 @@ DWORD __stdcall mainThread(HMODULE module)
         success("Found window.");
     }
 
-    // Eye resolution stuff
-
     loadConfig();
 
+    // Eye resolution stuff
     RECT desktop;
     GetWindowRect(ownWindow, &desktop);
     OpenXRService::eyeWidth = desktop.right;
     OpenXRService::eyeHeight = desktop.bottom;
 
-
     MH_Initialize();
 
-    log("Attempting to start OpenXR ...");
+    // Initialize OpenXR
+    log("Attempting to initialize OpenXR ...");
     if (!OpenXRService::createXRInstanceWithExtensions()) {
-        error("Unable to start vr");
+        error("Unable to initialize vr");
         shutdownNoHooks();
         return 1;
     }
     else {
-        success("Started OpenXR.");
+        success("Initialized OpenXR.");
     }
 
-    Sleep(100);
-
+    // Hook DirectX. This will eventually finalize OpenXR
     log("Attempting to hook DirectX ...");
-    if (!DirectXService::hookDirectX(ownWindow)) {
+    if (!DirectXService::hookDirectX()) {
         error("Unable to Hook DirectX.");
         shutdownNoHooks();
         return 1;
@@ -102,7 +100,7 @@ DWORD __stdcall mainThread(HMODULE module)
     info("Started Sucessfully");
 
     for (;;) {
-        Sleep(500);
+        Sleep(200);
         if (GetAsyncKeyState(VK_END)) {
             shutdown();
             return 0;

@@ -25,7 +25,6 @@ namespace BF2VR {
 	inline HMODULE ownModule;
 	inline HWND ownWindow;
 	
-
 	static std::ofstream logFile("logs.txt", std::ios_base::app);
 
 	void log(std::string message);

@@ -103,12 +103,13 @@ T GetClassFromName(void* addr, const char* name, SIZE_T classSize = 0x2000) {
 }
 
 ///////////////////////
-// Camera
+// Rendering
 ///////////////////////
 
 class WorldRenderSettings {
-public:
-	// TODO: Put stuff here
+public:	
+	char pad_0000[892]; //0x0000
+	float aaDisocclusionFactor; //0x037C
 
 	static WorldRenderSettings* GetInstance(void) {
 		return *(WorldRenderSettings**)OFFSETWORLDRENDERSETTINGS;
@@ -244,7 +245,7 @@ class VehicleEntityData
 public:
 	char pad_0000[0x120]; //0x0000
 	Vec3 interactionOffset; //0x0120
-	Vec3 m_VictimOffsetOverride; //0x0130
+	Vec3 victimOffsetOverride; //0x0130
 	char* VehicleName; //0x0238
 	char pad_0240[520]; //0x0240
 

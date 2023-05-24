@@ -32,6 +32,16 @@ namespace BF2VR {
         // Update render settings
         GameRenderer::GetInstance()->renderView->aspectRatio = RATIO;
 
+        // Fix TAA
+        WorldRenderSettings* worldRenderSettings = WorldRenderSettings::GetInstance();
+        if (isValidPtr(worldRenderSettings)) {
+            if (worldRenderSettings->aaDisocclusionFactor != 1.f)
+            {
+                success("Fixed TAA");
+                worldRenderSettings->aaDisocclusionFactor = 1.f;
+            }
+        }
+
         return toReturn;
     }
 

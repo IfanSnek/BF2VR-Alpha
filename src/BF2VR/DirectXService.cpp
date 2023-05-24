@@ -26,62 +26,55 @@ namespace BF2VR {
     {
         HRESULT result = S_OK;
         
-        if (shouldPresent)
+        // If the global d3d device is null, assign it.
+        if (pDevice == nullptr)
         {
-            if (!OpenXRService::isVRReady && pDevice == nullptr)
-            {
-                ID3D11Device* pDummyDevice;
-                ID3D11DeviceContext* pDummyContext;
-                pInstance->GetDevice(__uuidof(pDummyDevice), reinterpret_cast<PVOID*>(&pDummyDevice));
-                pDummyDevice->GetImmediateContext(&pDummyContext);
+            pInstance->GetDevice(__uuidof(pDevice), reinterpret_cast<PVOID*>(&pDevice));
+            pDevice->GetImmediateContext(&pContext);
 
-                pDevice = pDummyDevice;
-                pContext = pDummyContext;
-
-                log("Attempting to finalize OpenXR session ...");
-                if (!OpenXRService::beginXRSession(pDevice)) {
-                    error("Unable to begin session.");
-                    shutdown();
-                } else {
-                    success("Finalized OpenXR.");
-                }
+            // Finish setting up OpenXR
+            log("Attempting to finalize OpenXR session ...");
+            if (!OpenXRService::beginXRSession()) {
+                error("Unable to begin session.");
+                shutdown();
+                return result;
             }
-
-            if (OpenXRService::isVRReady) {
-
-                if (OpenXRService::onLeftEye) {
-
-
-                    if (!OpenXRService::beginFrame()) {
-                        warn("Did not begin a frame");
-                    }
-
-                    OpenXRService::updateActions();
-                }
-
-                OpenXRService::updatePoses();
-
-                // Get the color buffer from the screen
-                HRESULT hr = pInstance->GetBuffer(0, IID_PPV_ARGS(&pFrame));
-                if (SUCCEEDED(hr))
-                {
-                    OpenXRService::submitFrame(pFrame);
-                }
-
-                if (!OpenXRService::onLeftEye) {
-
-                    OpenXRService::endFrame();
-                }
-
-                // Switch eyes
-                OpenXRService::onLeftEye = !OpenXRService::onLeftEye;
-
-                
+            else {
+                success("Finalized OpenXR.");
             }
         }
 
+        if (OpenXRService::isVRReady) {
+            if (OpenXRService::onLeftEye) {
+                if (!OpenXRService::beginFrame()) {
+                    warn("Did not begin a frame");
+                }
+
+                // Query the VR input.
+                OpenXRService::updateActions();
+            }
+
+            // Update the camera, hands, and other posable stuff
+            OpenXRService::updatePoses();
+
+            // Get the color buffer from the screen
+            HRESULT hr = pInstance->GetBuffer(0, IID_PPV_ARGS(&pFrame));
+            if (SUCCEEDED(hr))
+            {
+                OpenXRService::submitFrame(pFrame);
+            }
+
+            // End frame on right eye
+            if (!OpenXRService::onLeftEye) {
+                OpenXRService::endFrame();
+            }
+
+            // Switch eyes
+            OpenXRService::onLeftEye = !OpenXRService::onLeftEye;
+        }
+
+        // Only render the left eye on screen because of stereo shake
         if (OpenXRService::onLeftEye) {
-        
             return pPresentOriginal(pInstance, SyncInterval, Flags);
         }
         else {
@@ -89,7 +82,7 @@ namespace BF2VR {
         }
     }
 
-    bool DirectXService::hookDirectX(HWND window) {
+    bool DirectXService::hookDirectX() {
 
         ID3D11Device* pDummyDevice;
         IDXGISwapChain* pDummySwapChain;
@@ -104,10 +97,8 @@ namespace BF2VR {
         desc.SampleDesc.Count = 1;
         desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
         desc.BufferCount = 1;
-
-        // Finish setting up  our dummy
-        desc.OutputWindow = window;
         desc.Windowed = true;
+        desc.OutputWindow = ownWindow;
         desc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
         desc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 
@@ -136,6 +127,7 @@ namespace BF2VR {
             return false;
         }
 
+        // Release dummy resources
         pDummySwapChain->Release();
         pDummyDevice->Release();
         pDummyContext->Release();
@@ -148,6 +140,7 @@ namespace BF2VR {
         MH_DisableHook(reinterpret_cast<LPVOID>(pPresentTarget));
         MH_RemoveHook(reinterpret_cast<LPVOID>(pPresentTarget));
 
+        // Deallocate
         if (srvCreated)
         {
             pSRV->Release();
@@ -161,44 +154,36 @@ namespace BF2VR {
         {
            pFrameCopy->Release();
         }
-
     }
 
-    void DirectXService::renderOverlays(ID3D11Device* device, ID3D11DeviceContext* context) {
-
-
+    void DirectXService::renderOverlays() {
         // This uses some parts of DirectXTK
         // PrimitiveBatch
-
-        batch = std::make_unique<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>>(context);
+        batch = std::make_unique<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>>(pContext);
 
         // BasicEffect
-        effect.reset(new DirectX::BasicEffect(device));
+        effect.reset(new DirectX::BasicEffect(pDevice));
         effect->SetVertexColorEnabled(true);
 
         void const* shaderByteCode;
         size_t byteCodeLength;
-
         effect->GetVertexShaderBytecode(&shaderByteCode, &byteCodeLength);
 
         // Set InputLayout
-        device->CreateInputLayout(
+        pDevice->CreateInputLayout(
             DirectX::VertexPositionColor::InputElements,
             DirectX::VertexPositionColor::InputElementCount,
             shaderByteCode,
             byteCodeLength,
-            &pInputLayout);
-        
+            &pInputLayout
+        );
 
-        effect->SetView(DirectX::SimpleMath::Matrix::CreateLookAt(DirectX::SimpleMath::Vector3(0.f, 0.f, 1),
-            DirectX::SimpleMath::Vector3::Zero, DirectX::SimpleMath::Vector3::UnitY));
+        effect->SetView(DirectX::SimpleMath::Matrix::CreateLookAt(DirectX::SimpleMath::Vector3(0.f, 0.f, 1), DirectX::SimpleMath::Vector3::Zero, DirectX::SimpleMath::Vector3::UnitY));
 
-
-        effect->Apply(context);
-        context->IASetInputLayout(pInputLayout);
+        effect->Apply(pContext);
+        pContext->IASetInputLayout(pInputLayout);
 
         // Actually draw the line
-
         batch->Begin();
 
         float lineLength = 0.1f;
@@ -208,14 +193,12 @@ namespace BF2VR {
         DirectX::VertexPositionColor v2(DirectX::SimpleMath::Vector3(xOffset + lineLength, crosshairY + 0.003f, 0), DirectX::Colors::Green);
         DirectX::VertexPositionColor v3(DirectX::SimpleMath::Vector3(xOffset - lineLength, crosshairY - 0.003f, 0), DirectX::Colors::Green);
         DirectX::VertexPositionColor v4(DirectX::SimpleMath::Vector3(xOffset + lineLength, crosshairY - 0.003f, 0), DirectX::Colors::Green);
-
         batch->DrawQuad(v1, v2, v4, v3);
 
         DirectX::VertexPositionColor v5(DirectX::SimpleMath::Vector3(xOffset + 0.003f, -lineLength + crosshairY, 0), DirectX::Colors::Green);
         DirectX::VertexPositionColor v6(DirectX::SimpleMath::Vector3(xOffset + 0.003f, lineLength + crosshairY, 0), DirectX::Colors::Green);
         DirectX::VertexPositionColor v7(DirectX::SimpleMath::Vector3(xOffset - 0.003f, -lineLength + crosshairY, 0), DirectX::Colors::Green);
         DirectX::VertexPositionColor v8(DirectX::SimpleMath::Vector3(xOffset - 0.003f, lineLength + crosshairY, 0), DirectX::Colors::Green);
-
         batch->DrawQuad(v5,v6,v8,v7);
 
         batch->End();
@@ -223,16 +206,10 @@ namespace BF2VR {
 
     bool DirectXService::renderXRFrame(ID3D11Texture2D* texture, ID3D11RenderTargetView* rtv)
     {
-
-        ID3D11Device* device;
-        rtv->GetDevice(&device);
-        ID3D11DeviceContext* context;
-        device->GetImmediateContext(&context);
-
         // Create shaders if needed
         if (!shadersCreated)
         {
-            HRESULT hr = device->CreatePixelShader(
+            HRESULT hr = pDevice->CreatePixelShader(
                 gPS,
                 ARRAYSIZE(gPS),
                 nullptr,
@@ -244,7 +221,7 @@ namespace BF2VR {
                 return false;
             }
 
-            hr = device->CreateVertexShader(
+            hr = pDevice->CreateVertexShader(
                 gVS,
                 ARRAYSIZE(gVS),
                 nullptr,
@@ -262,7 +239,6 @@ namespace BF2VR {
         }
 
         // Invalidate the old srv if it changes
-
         srvCreated = true;
         if (pSRV == nullptr) {
             srvCreated = false;
@@ -289,7 +265,7 @@ namespace BF2VR {
             D3D11_TEXTURE2D_DESC textureDesc;
             pFrame->GetDesc(&textureDesc);
             textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-            HRESULT hr = device->CreateTexture2D(&textureDesc, nullptr, &pFrameCopy);
+            HRESULT hr = pDevice->CreateTexture2D(&textureDesc, nullptr, &pFrameCopy);
             if (FAILED(hr))
             {
                 warn("Failed to copy texture");
@@ -301,7 +277,7 @@ namespace BF2VR {
             srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
             srvDesc.Texture2D.MipLevels = 1;
             srvDesc.Texture2D.MostDetailedMip = 0;
-            hr = device->CreateShaderResourceView(pFrameCopy, &srvDesc, &pSRV);
+            hr = pDevice->CreateShaderResourceView(pFrameCopy, &srvDesc, &pSRV);
             if (FAILED(hr))
             {
                 warn("Failed to create shader resource view");
@@ -312,22 +288,19 @@ namespace BF2VR {
         }
 
         // Finally, draw.
+        pContext->CopyResource(pFrameCopy, pFrame);
+        pContext->IASetVertexBuffers(0, 0, nullptr, nullptr, nullptr);
+        pContext->IASetIndexBuffer(nullptr, static_cast<DXGI_FORMAT>(0), 0);
+        pContext->IASetInputLayout(nullptr);
+        pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        pContext->VSSetShader(pVertexShader, nullptr, 0);
+        pContext->PSSetShader(pPixelShader, nullptr, 0);
+        pContext->OMSetRenderTargets(1, &rtv, nullptr);
+        pContext->PSSetShaderResources(0, 1, &pSRV);
+        pContext->Draw(3, 0);
 
-        context->CopyResource(pFrameCopy, pFrame);
-        context->IASetVertexBuffers(0, 0, nullptr, nullptr, nullptr);
-        context->IASetIndexBuffer(nullptr, static_cast<DXGI_FORMAT>(0), 0);
-        context->IASetInputLayout(nullptr);
-        context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        context->VSSetShader(pVertexShader, nullptr, 0);
-        context->PSSetShader(pPixelShader, nullptr, 0);
-        context->OMSetRenderTargets(1, &rtv, nullptr);
-        context->PSSetShaderResources(0, 1, &pSRV);
-        context->Draw(3, 0);
-
-        renderOverlays(device, context);
-
-        context->Release();
-        device->Release();
+        // Render VR ui
+        renderOverlays();
 
         return true;
     }
