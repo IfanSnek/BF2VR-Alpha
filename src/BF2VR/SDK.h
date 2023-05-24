@@ -20,13 +20,14 @@
 #include "Types.h"
 #include <iostream>
 
-static const DWORD64 OFFSETGAMECONTEXT  = 0x143DD7948;
-static const DWORD64 OFFSETLOCALAIMER   = 0x14406E610;
-static const DWORD64 OFFSETGAMERENDERER = 0x143ffbe10;
-static const DWORD64 OFFSETUISETTINGS   = 0x143aebb80;
+static const DWORD64 OFFSETGAMECONTEXT			  = 0x143DD7948;
+static const DWORD64 OFFSETLOCALAIMER			  = 0x14406E610;
+static const DWORD64 OFFSETGAMERENDERER		      = 0x143ffbe10;
+static const DWORD64 OFFSETUISETTINGS			  = 0x143aebb80;
+static const DWORD64 OFFSETWORLDRENDERSETTINGS	  = 0x143D7B068;
 
-static const DWORD64 OFFSETCAMERA       = 0x1410c7010;
-static const DWORD64 OFFSETPOSE			= 0x142150910;
+static const DWORD64 OFFSETCAMERA			      = 0x1410c7010;
+static const DWORD64 OFFSETPOSE					  = 0x142150910;
 
 static inline bool isValidPtr(PVOID p) { return (p >= (PVOID)0x10000) && (p < ((PVOID)0x000F000000000000)) && p != nullptr && !IsBadReadPtr(p, sizeof(PVOID)); }
 
@@ -104,6 +105,15 @@ T GetClassFromName(void* addr, const char* name, SIZE_T classSize = 0x2000) {
 ///////////////////////
 // Camera
 ///////////////////////
+
+class WorldRenderSettings {
+public:
+	// TODO: Put stuff here
+
+	static WorldRenderSettings* GetInstance(void) {
+		return *(WorldRenderSettings**)OFFSETWORLDRENDERSETTINGS;
+	}
+};
 
 class RenderView {
 public:

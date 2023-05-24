@@ -496,7 +496,7 @@ namespace BF2VR {
         return true;
     }
 
-    bool OpenXRService::beginFrameAndGetVectors(Vec3& Loc, Vec4& Rot, Matrix4 outMatrix)
+    bool OpenXRService::beginFrame()
     {
         // Check if we need to stop
         if (shouldStop)

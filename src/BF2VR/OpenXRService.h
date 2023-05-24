@@ -51,7 +51,7 @@ namespace BF2VR {
 		static bool createXRInstanceWithExtensions();
 		static bool beginXRSession(ID3D11Device* pDevice);
 		static bool prepareActions();
-		static bool beginFrameAndGetVectors(Vec3& outHeadLoc, Vec4& outHeadRot, Matrix4 outHeadMatrix);
+		static bool beginFrame();
 		static bool submitFrame(ID3D11Texture2D* pTexture);
 		static bool updateActions();
 		static bool updatePoses();

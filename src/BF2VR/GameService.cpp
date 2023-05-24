@@ -31,6 +31,7 @@ namespace BF2VR {
 
         // Update render settings
         GameRenderer::GetInstance()->renderView->aspectRatio = RATIO;
+
         return toReturn;
     }
 
@@ -99,7 +100,7 @@ namespace BF2VR {
                 return;
             }
 
-            Vec3 playerPosition = {0, 0, 0};
+            Vec3 playerPosition = Vec3(0, 0, 0);
             float heightOffset = 0;
             bool inVehicle = false;
 

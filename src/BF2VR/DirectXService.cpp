@@ -25,7 +25,7 @@ namespace BF2VR {
     HRESULT DirectXService::presentDetour(IDXGISwapChain* pInstance, UINT SyncInterval, UINT Flags)
     {
         HRESULT result = S_OK;
-
+        
         if (shouldPresent)
         {
             if (!OpenXRService::isVRReady && pDevice == nullptr)
@@ -51,11 +51,8 @@ namespace BF2VR {
 
                 if (OpenXRService::onLeftEye) {
 
-                    Vec3 hmd_location;
-                    Vec4 hmd_quatrotation;
-                    Matrix4 hmd_transformationmatrix{};
 
-                    if (!OpenXRService::beginFrameAndGetVectors(hmd_location, hmd_quatrotation, hmd_transformationmatrix)) {
+                    if (!OpenXRService::beginFrame()) {
                         warn("Did not begin a frame");
                     }
 
@@ -84,6 +81,7 @@ namespace BF2VR {
         }
 
         if (OpenXRService::onLeftEye) {
+        
             return pPresentOriginal(pInstance, SyncInterval, Flags);
         }
         else {

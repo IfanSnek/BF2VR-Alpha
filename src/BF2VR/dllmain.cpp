@@ -101,7 +101,6 @@ DWORD __stdcall mainThread(HMODULE module)
 
     info("Started Sucessfully");
 
-
     for (;;) {
         Sleep(500);
         if (GetAsyncKeyState(VK_END)) {
