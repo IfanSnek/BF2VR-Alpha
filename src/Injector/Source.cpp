@@ -1,5 +1,4 @@
 // Source.cpp - Source code for the DLL injector and mod installer.
-// and a few math ones.
 // Copyright(C) 2023 Ethan Porcaro
 
 // This program is free software : you can redistribute itand /or modify
@@ -11,6 +10,7 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
+
 #include <iostream>
 #include <Windows.h>
 #include <TlHelp32.h>
@@ -28,7 +28,6 @@ using namespace std;
 
 int inject()
 {
-
 	// Get the DLL file path
 	char buffer[MAX_PATH];
 	GetModuleFileNameA(NULL, buffer, MAX_PATH);
@@ -61,6 +60,12 @@ int inject()
 		std::string s_procexe(ws_procexe.begin(), ws_procexe.end());
 
 		// Check for game process
+		if (!strcmp(s_procexe.c_str(), "starwarsbattlefrontii.exe"))
+		{
+			pid = structprocsnapshot.th32ProcessID;
+		}
+
+		// Check for xr runtime process
 		if (!strcmp(s_procexe.c_str(), "vrserver.exe"))
 		{
 			pid2 = structprocsnapshot.th32ProcessID;
@@ -69,15 +74,16 @@ int inject()
 		{
 			pid2 = structprocsnapshot.th32ProcessID;
 		}
-
-		// Check for game process
-		if (!strcmp(s_procexe.c_str(), "starwarsbattlefrontii.exe"))
-		{
-			pid = structprocsnapshot.th32ProcessID;
-		}
 	}
 
-	// Never found
+	// Never found game process
+	if (pid == -1)
+	{
+		cerr << "Game not open or found." << endl;
+		return 1;
+	}
+
+	// Never found xr runtime
 	if (pid2 == -1)
 	{
 		cerr << "Oculus or SteamVR is not open. Press enter within 5 seconds to continue anyway." << endl;
@@ -85,8 +91,8 @@ int inject()
 		bool pressed = false;
 		for (int i = 0; i < 250; i++)
 		{
-			Sleep(1);
-			if (GetAsyncKeyState(VK_RETURN)) { // This causes a delay
+			// No sleep because the AsyncKeyState already causes a delay
+			if (GetAsyncKeyState(VK_RETURN)) {
 				pressed = true;
 				break;
 			}
@@ -97,16 +103,10 @@ int inject()
 		}
 	}
 
-	// Never found
-	if (pid == -1)
-	{
-		cerr << "Game not open or found." << endl;
-		return 1;
-	}
-
 	CloseHandle(snapshot);
 
-	// Inject
+	// Inject the mod DLL
+
 	HANDLE handle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid); // Opening the Process with All Access
 	// Allocate memory for the dllpath in the target process, length of the path string + null terminator
 	LPVOID pDllPath = VirtualAllocEx(handle, 0, strlen(DllPath) + 1, MEM_COMMIT, PAGE_READWRITE);
@@ -134,11 +134,13 @@ void reinstall()
 
 	for (;;)
 	{
+		Sleep(10);
 		if (GetAsyncKeyState(VK_RETURN)) {
 			break;
 		}
 	}
 
+	// Open file picker
 	TCHAR szTitle[MAX_PATH];
 	BROWSEINFO bi = { 0 };
 	bi.lpszTitle = L"Select a folder containing starwarsbattlefrontii.exe";
@@ -155,7 +157,7 @@ void reinstall()
 			wcstombs_s(&nNumCharConverted, szString, MAX_PATH,
 				szTitle, MAX_PATH);
 
-			// Copy openxrruntime
+			// Copy openxr_runtime.dll
 
 			// Get the DLL file path
 			char buffer[MAX_PATH];

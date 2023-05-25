@@ -32,7 +32,6 @@ static const DWORD64 OFFSETPOSE					  = 0x142150910;
 static inline bool isValidPtr(PVOID p) { return (p >= (PVOID)0x10000) && (p < ((PVOID)0x000F000000000000)) && p != nullptr && !IsBadReadPtr(p, sizeof(PVOID)); }
 
 // https://github.com/onra2/swbf2-internal/blob/master/swbf2%20onra2/Classes.h
-
 struct typeInfoMemberResult {
 	void* pVTable;
 	const char* name;

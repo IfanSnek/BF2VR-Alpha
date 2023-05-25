@@ -438,7 +438,7 @@ namespace BF2VR {
 		// Rehister bindings
 		XrInteractionProfileSuggestedBinding suggestedBindings = { XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
 		suggestedBindings.interactionProfile = interactionProfilePath;
-		suggestedBindings.countSuggestedBindings = 11;
+		suggestedBindings.countSuggestedBindings = bindings.size();
 		suggestedBindings.suggestedBindings = bindings.data();
 
 		xrSuggestInteractionProfileBindings(xrInstance, &suggestedBindings);
@@ -807,7 +807,6 @@ namespace BF2VR {
 		Vec3 HMDEuler = eulerFromQuat(HMDQuat);
 
 		Matrix4 HMDMat;
-
 		HMDMat.x.x = 2 * (q0 * q0 + q1 * q1) - 1;
 		HMDMat.y.x = 2 * (q1 * q2 - q0 * q3);
 		HMDMat.z.x = 2 * (q1 * q3 + q0 * q2);
@@ -832,7 +831,6 @@ namespace BF2VR {
 		const auto [hq1, hq2, hq3, hq0] = handLocations[1].pose.orientation;
 		const auto [hlx, hly, hlz] = handLocations[1].pose.position;
 
-
 		Vec4 hudQuat;
 		hudQuat.w = q0;
 		hudQuat.x = q1;
@@ -841,7 +839,6 @@ namespace BF2VR {
 
 		if (grabValue[1].currentState > 0.5f)
 		{
-
 			if (!isFiring)
 				isFiring = true;
 		}
@@ -873,7 +870,6 @@ namespace BF2VR {
 
 		float yaw = -hudEuler.y;
 		float pitch = hudEuler.z;
-
 
 		// Relative aim location in frostbite units
 		Vec3 fbAimLoc = aimLoc - HMDLoc;

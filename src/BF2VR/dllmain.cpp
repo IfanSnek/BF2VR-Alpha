@@ -19,8 +19,7 @@
 
 using namespace BF2VR;
 
-// Our mod thread
-
+// Main mod thread
 DWORD __stdcall mainThread(HMODULE module)
 {
     ownModule = module;

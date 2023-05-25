@@ -39,19 +39,15 @@ namespace BF2VR {
 	void deb(std::string message);
 
 	void shutdown();
-
 	void shutdownNoHooks();
 
 	void loadConfig();
-
 	void saveConfig();
 
 	Vec3 eulerFromQuat(Vec4 q);
 	Vec4 quatFromEuler(Vec3 e);
 
-
 	// Config settings
-
 	inline float RATIO = 1;
 	inline float FOV = 90.0f;
 	inline float FOVOverride = -1.f;
