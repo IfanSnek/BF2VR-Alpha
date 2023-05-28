@@ -37,7 +37,7 @@ namespace BF2VR {
         if (isValidPtr(worldRenderSettings)) {
             if (worldRenderSettings->aaDisocclusionFactor != 1.f)
             {
-                success("Fixed TAA");
+                success("Disabled TAA");
                 worldRenderSettings->aaDisocclusionFactor = 1.f;
             }
         }
@@ -174,17 +174,17 @@ namespace BF2VR {
 
             }
 
-            Alternator* alternator = aimer->alternator;
-            if (!isValidPtr(alternator))
+            Alternator* viewAngleSwitch = aimer->alternator;
+            if (!isValidPtr(viewAngleSwitch))
             {
                 warn("Could not find address for either ViewAngle. If this shows up a lot, please report this to the dev. Try respawning to see if it temporarially fixes it.");
                 return;
 
-            } else if (isValidPtr(alternator->Primary))
+            } else if (isValidPtr(viewAngleSwitch->Primary))
             {
                 for (int i = 0; i < 12; i++)
                 {
-                    if (alternator->Primary->Signature[i] == 0xFF)
+                    if (viewAngleSwitch->Primary->Signature[i] == 0xFF)
                     {
                         matches++;
                     }
@@ -195,18 +195,18 @@ namespace BF2VR {
                 if (matches == 12)
                 {
                     // Primary is active
-                    alternator->Primary->Pitch = pitch;
-                    alternator->Primary->Yaw = yaw - 3.14f;
+                    viewAngleSwitch->Primary->Pitch = pitch;
+                    viewAngleSwitch->Primary->Yaw = yaw - 3.14f;
 
                 }
                 else {
-                    if (isValidPtr(alternator->Secondary))
+                    if (isValidPtr(viewAngleSwitch->Secondary))
                     {
                         matches = 0;
 
                         for (int i = 0; i < 12; i++)
                         {
-                            if (alternator->Secondary->Signature[i] == 0xFF)
+                            if (viewAngleSwitch->Secondary->Signature[i] == 0xFF)
                             {
                                 matches++;
                             }
@@ -217,8 +217,8 @@ namespace BF2VR {
                         if (matches == 12)
                         {
                             // Secondary is active
-                            alternator->Secondary->Pitch = pitch;
-                            alternator->Secondary->Yaw = yaw + 3.14f;
+                            viewAngleSwitch->Secondary->Pitch = pitch;
+                            viewAngleSwitch->Secondary->Yaw = yaw + 3.14f;
                         }
                         else {
                             // Uh oh, none are active.

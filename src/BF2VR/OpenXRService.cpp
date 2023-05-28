@@ -24,7 +24,7 @@
 #include "Utils.h"
 
 namespace BF2VR {
-	bool OpenXRService::createXRInstanceWithExtensions() {
+	bool OpenXRService::createXRInstance() {
 
 		// Enable extensions
 		std::vector<const char*> enabledExtensions;
@@ -117,7 +117,7 @@ namespace BF2VR {
 		return true;
 	}
 
-	bool OpenXRService::beginXRSession() {
+	bool OpenXRService::createXRSession() {
 
 		// Bind d3d11
 		XrGraphicsBindingD3D11KHR graphicsBinding = { XR_TYPE_GRAPHICS_BINDING_D3D11_KHR };
@@ -210,18 +210,19 @@ namespace BF2VR {
 			xrSwapchains.push_back(swapchain);
 			xrRTVs.insert(std::pair(i, rtvs));
 		}
+		return true;
+	}
+
+	bool OpenXRService::beginXRSession() {
 
 		// Begin OpenXR session
 		XrSessionBeginInfo beginInfo = { XR_TYPE_SESSION_BEGIN_INFO };
 		beginInfo.primaryViewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
-		xr = xrBeginSession(xrSession, &beginInfo);
+		XrResult xr = xrBeginSession(xrSession, &beginInfo);
 		if (xr != XR_SUCCESS) {
 			error("Could not begin XR xrSession. Error: " + std::to_string(xr));
 			return false;
 		}
-
-		// Configure actions
-		prepareActions();
 
 		isVRReady = true;
 		return true;
@@ -438,7 +439,7 @@ namespace BF2VR {
 		// Rehister bindings
 		XrInteractionProfileSuggestedBinding suggestedBindings = { XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
 		suggestedBindings.interactionProfile = interactionProfilePath;
-		suggestedBindings.countSuggestedBindings = bindings.size();
+		suggestedBindings.countSuggestedBindings = (int)bindings.size();
 		suggestedBindings.suggestedBindings = bindings.data();
 
 		xrSuggestInteractionProfileBindings(xrInstance, &suggestedBindings);
@@ -488,35 +489,66 @@ namespace BF2VR {
 		return true;
 	}
 
+	void OpenXRService::consumeEvents()
+	{
+		// Consume events
+		XrEventDataBuffer runtimeEvent = { XR_TYPE_EVENT_DATA_BUFFER };
+		XrResult xr = xrPollEvent(xrInstance, &runtimeEvent);
+
+		while (xr == XR_SUCCESS) {
+
+			if (runtimeEvent.type == XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED)
+			{
+				XrEventDataSessionStateChanged* event = (XrEventDataSessionStateChanged*)&runtimeEvent;
+
+				if (event->state >= XR_SESSION_STATE_READY) {
+
+					// Finish setting up OpenXR if it hasn't already been set up
+					if (!isVRReady && !stopping)
+					{
+
+						if (!prepareActions())
+						{
+							error("Unable to prepare VR actions.");
+							shutdown();
+							return;
+						}
+
+						log("Attempting to finalize OpenXR session ...");
+						if (!beginXRSession()) 
+						{
+							error("Unable to begin session.");
+							shutdown();
+							return;
+						}
+
+						success("Finalized OpenXR.");
+					}
+
+				}
+
+				if (event->state >= XR_SESSION_STATE_STOPPING) {
+					stopping = true;
+					return;
+				}
+			}
+			if (runtimeEvent.type == XR_TYPE_EVENT_DATA_INSTANCE_LOSS_PENDING)
+			{
+				stopping = true;
+				return;
+			}
+
+			runtimeEvent.type = XR_TYPE_EVENT_DATA_BUFFER;
+			xr = xrPollEvent(xrInstance, &runtimeEvent);
+		}
+	}
+
 	bool OpenXRService::beginFrame()
 	{
 		// Check if we need to stop
 		if (shouldStop)
 		{
 			XrResult xr = xrRequestExitSession(xrSession);
-
-			XrEventDataBuffer runtimeEvent = { XR_TYPE_EVENT_DATA_BUFFER };
-			xr = xrPollEvent(xrInstance, &runtimeEvent);
-
-			while (xr == XR_SUCCESS) {
-
-				if (runtimeEvent.type == XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED)
-				{
-					XrEventDataSessionStateChanged* event = (XrEventDataSessionStateChanged*)&runtimeEvent;
-					if (event->state >= XR_SESSION_STATE_STOPPING) {
-						stopping = true;
-						return true;
-					}
-				}
-				if (runtimeEvent.type == XR_TYPE_EVENT_DATA_INSTANCE_LOSS_PENDING)
-				{
-					stopping = true;
-					return true;
-				}
-
-				runtimeEvent.type = XR_TYPE_EVENT_DATA_BUFFER;
-				xr = xrPollEvent(xrInstance, &runtimeEvent);
-			}
 		}
 
 		if (stopping)
@@ -531,7 +563,6 @@ namespace BF2VR {
 			warn("Could not wait on OpenXR frame. Error: " + std::to_string(xr));
 			return false;
 		}
-
 
 		// Begin work on frame
 		xr = xrBeginFrame(xrSession, nullptr);

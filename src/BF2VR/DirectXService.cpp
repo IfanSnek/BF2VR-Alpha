@@ -25,52 +25,51 @@ namespace BF2VR {
     HRESULT DirectXService::presentDetour(IDXGISwapChain* pInstance, UINT SyncInterval, UINT Flags)
     {
         HRESULT result = S_OK;
-        
+
         // If the global d3d device is null, assign it.
         if (pDevice == nullptr)
         {
             pInstance->GetDevice(__uuidof(pDevice), reinterpret_cast<PVOID*>(&pDevice));
             pDevice->GetImmediateContext(&pContext);
-
-            // Finish setting up OpenXR
-            log("Attempting to finalize OpenXR session ...");
-            if (!OpenXRService::beginXRSession()) {
-                error("Unable to begin session.");
-                shutdown();
-                return result;
-            }
-            else {
-                success("Finalized OpenXR.");
-            }
+            OpenXRService::createXRSession();
         }
 
-        if (OpenXRService::isVRReady) {
-            if (OpenXRService::onLeftEye) {
-                if (!OpenXRService::beginFrame()) {
-                    warn("Did not begin a frame");
-                }
+        // Process xr events
+        OpenXRService::consumeEvents();
 
-                // Query the VR input.
-                OpenXRService::updateActions();
-            }
-
-            // Update the camera, hands, and other posable stuff
-            OpenXRService::updatePoses();
-
+        // Render loop
+        if (OpenXRService::isVRReady)
+        {
             // Get the color buffer from the screen
             HRESULT hr = pInstance->GetBuffer(0, IID_PPV_ARGS(&pFrame));
+
             if (SUCCEEDED(hr))
             {
+
+                if (OpenXRService::onLeftEye) {
+                    // Wait and begin frame
+                    if (!OpenXRService::beginFrame()) {
+                        warn("Did not begin a frame");
+                    }
+
+                    // Query the VR input.
+                    OpenXRService::updateActions();
+                }
+
+                // Update the camera, hands, and other posable stuff
+                OpenXRService::updatePoses();
+
                 OpenXRService::submitFrame(pFrame);
-            }
 
-            // End frame on right eye
-            if (!OpenXRService::onLeftEye) {
-                OpenXRService::endFrame();
-            }
+                // End frame on right eye
+                if (!OpenXRService::onLeftEye) {
+                    OpenXRService::endFrame();
+                }
 
-            // Switch eyes
-            OpenXRService::onLeftEye = !OpenXRService::onLeftEye;
+                // Switch eyes
+                OpenXRService::onLeftEye = !OpenXRService::onLeftEye;
+                
+            }
         }
 
         // Only render the left eye on screen because of stereo shake
