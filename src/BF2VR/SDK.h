@@ -658,7 +658,7 @@ public:
 	char pad_0020[56]; //0x0020
 	uint32_t Team; //0x0058
 	char pad_005C[420]; //0x005C
-	class AttachedControllable* attachedControllable; //0x0200
+	class ClientSoldierEntity* attachedControllable; //0x0200
 	char pad_0208[8]; //0x0208
 	class ClientSoldierEntity* controlledControllable; //0x0210
 	char pad_0218[1704]; //0x0218

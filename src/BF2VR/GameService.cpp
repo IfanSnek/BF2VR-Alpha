@@ -114,28 +114,35 @@ namespace BF2VR {
             float heightOffset = 0;
             bool inVehicle = false;
 
-            AttachedControllable* vehicle = player->attachedControllable;
+            ClientSoldierEntity* soldier = player->attachedControllable;
 
-            if (isValidPtr(vehicle))
+            // In vehicle
+            if (isValidPtr(soldier))
             {
+                inVehicle = true;
+                InputService::useRight = true; // Use right joystick
+
+                AttachedControllable* vehicle = (AttachedControllable*)player->attachedControllable;
                 playerPosition = vehicle->GetVehicleLocation();
 
+                // Not starfighter
                 if (playerPosition.x == 0 && playerPosition.y == 0 && playerPosition.z == 0)
                 {
-                    warn("Vehicle could not be located.");
+                    warn("Mounted vehicles do not work yet. Sorry. You will see additional warnings as a result.");
+                    return;
                 }
-
-                heightOffset = .8f;
-                inVehicle = true;
             }
             else {
                 inVehicle = false;
+                InputService::useRight = false; // Use right joystick
 
-                ClientSoldierEntity* soldier = player->controlledControllable;
+                soldier = player->controlledControllable;
                 if (!isValidPtr(soldier)) {
-                    InputService::useRight = inVehicle;
+                    // Probably in menu
                     return;
                 }
+
+                heightOffset = soldier->HeightOffset;
 
                 ClientSoldierPrediction* prediction = soldier->clientSoldierPrediction;
                 if (!isValidPtr(prediction)) {
@@ -144,13 +151,10 @@ namespace BF2VR {
 
                 }
                 playerPosition = prediction->Location;
-                heightOffset = soldier->HeightOffset;
             }
 
-            InputService::useRight = inVehicle;
-
             hmdMat.o.x += playerPosition.x;
-            hmdMat.o.y += playerPosition.y - heightOffset + 2.f;
+            hmdMat.o.y += playerPosition.y - heightOffset + 3.f;
             hmdMat.o.z += playerPosition.z;
 
             // Update the transform that the CameraHook will use

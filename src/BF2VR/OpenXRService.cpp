@@ -907,7 +907,7 @@ namespace BF2VR {
 
 		Vec3 relAimLoc = rotateAround(aimLoc, HMDLoc, HMDEuler.y);
 
-		fbAimLoc.x = relAimLoc.y - 0.5f; // Up down
+		fbAimLoc.x = relAimLoc.y + 0.5f; // Up down
 		fbAimLoc.y = relAimLoc.x;
 		fbAimLoc.z = -relAimLoc.z;
 
@@ -926,11 +926,11 @@ namespace BF2VR {
 		fbAimQuat = fbAimQuat.rotateByEuler(0, 0, -90);
 		*/
 
-		GameService::updateCamera(HMDLoc, HMDMat, yaw, pitch - 0.37f);
+		GameService::updateCamera(HMDLoc, HMDMat, yaw, pitch - 0.73f);
 		GameService::updateBone("Wep_Root", fbAimLoc, fbAimQuat);
 
 		DirectXService::crosshairX = (-aimEuler.y + HMDEuler.y) * 1.3f;
-		DirectXService::crosshairY = (aimEuler.z - HMDEuler.z) * 1.3f - 0.5f;
+		DirectXService::crosshairY = (aimEuler.z - HMDEuler.z) * 1.3f - 1.f;
 
 		if (!(grabValue[1].currentState > 0.5f) && isFiring)
 		{
