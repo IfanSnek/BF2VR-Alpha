@@ -49,7 +49,7 @@ DWORD __stdcall mainThread(HMODULE module)
     RECT desktop;
     GetWindowRect(ownWindow, &desktop);
     
-    = desktop.right;
+    OpenXRService::eyeWidth = desktop.right;
     OpenXRService::eyeHeight = desktop.bottom;
 
     MH_Initialize();
