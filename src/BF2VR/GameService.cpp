@@ -37,7 +37,7 @@ namespace BF2VR {
         if (isValidPtr(worldRenderSettings)) {
             if (worldRenderSettings->aaDisocclusionFactor != 1.f)
             {
-                success("Fixed TAA");
+                success("Disabled TAA");
                 worldRenderSettings->aaDisocclusionFactor = 1.f;
             }
         }
@@ -114,28 +114,35 @@ namespace BF2VR {
             float heightOffset = 0;
             bool inVehicle = false;
 
-            AttachedControllable* vehicle = player->attachedControllable;
+            ClientSoldierEntity* soldier = player->attachedControllable;
 
-            if (isValidPtr(vehicle))
+            // In vehicle
+            if (isValidPtr(soldier))
             {
+                inVehicle = true;
+                InputService::useRight = true; // Use right joystick
+
+                AttachedControllable* vehicle = (AttachedControllable*)player->attachedControllable;
                 playerPosition = vehicle->GetVehicleLocation();
 
+                // Not starfighter
                 if (playerPosition.x == 0 && playerPosition.y == 0 && playerPosition.z == 0)
                 {
-                    warn("Vehicle could not be located.");
+                    warn("Mounted vehicles do not work yet. Sorry. You will see additional warnings as a result.");
+                    return;
                 }
-
-                heightOffset = .8f;
-                inVehicle = true;
             }
             else {
                 inVehicle = false;
+                InputService::useRight = false; // Use right joystick
 
-                ClientSoldierEntity* soldier = player->controlledControllable;
+                soldier = player->controlledControllable;
                 if (!isValidPtr(soldier)) {
-                    InputService::useRight = inVehicle;
+                    // Probably in menu
                     return;
                 }
+
+                heightOffset = soldier->HeightOffset;
 
                 ClientSoldierPrediction* prediction = soldier->clientSoldierPrediction;
                 if (!isValidPtr(prediction)) {
@@ -144,13 +151,10 @@ namespace BF2VR {
 
                 }
                 playerPosition = prediction->Location;
-                heightOffset = soldier->HeightOffset;
             }
 
-            InputService::useRight = inVehicle;
-
             hmdMat.o.x += playerPosition.x;
-            hmdMat.o.y += playerPosition.y - heightOffset + 2.f;
+            hmdMat.o.y += playerPosition.y - heightOffset + 3.f;
             hmdMat.o.z += playerPosition.z;
 
             // Update the transform that the CameraHook will use
@@ -174,17 +178,17 @@ namespace BF2VR {
 
             }
 
-            Alternator* alternator = aimer->alternator;
-            if (!isValidPtr(alternator))
+            Alternator* viewAngleSwitch = aimer->alternator;
+            if (!isValidPtr(viewAngleSwitch))
             {
                 warn("Could not find address for either ViewAngle. If this shows up a lot, please report this to the dev. Try respawning to see if it temporarially fixes it.");
                 return;
 
-            } else if (isValidPtr(alternator->Primary))
+            } else if (isValidPtr(viewAngleSwitch->Primary))
             {
                 for (int i = 0; i < 12; i++)
                 {
-                    if (alternator->Primary->Signature[i] == 0xFF)
+                    if (viewAngleSwitch->Primary->Signature[i] == 0xFF)
                     {
                         matches++;
                     }
@@ -195,18 +199,18 @@ namespace BF2VR {
                 if (matches == 12)
                 {
                     // Primary is active
-                    alternator->Primary->Pitch = pitch;
-                    alternator->Primary->Yaw = yaw - 3.14f;
+                    viewAngleSwitch->Primary->Pitch = pitch;
+                    viewAngleSwitch->Primary->Yaw = yaw - 3.14f;
 
                 }
                 else {
-                    if (isValidPtr(alternator->Secondary))
+                    if (isValidPtr(viewAngleSwitch->Secondary))
                     {
                         matches = 0;
 
                         for (int i = 0; i < 12; i++)
                         {
-                            if (alternator->Secondary->Signature[i] == 0xFF)
+                            if (viewAngleSwitch->Secondary->Signature[i] == 0xFF)
                             {
                                 matches++;
                             }
@@ -217,8 +221,8 @@ namespace BF2VR {
                         if (matches == 12)
                         {
                             // Secondary is active
-                            alternator->Secondary->Pitch = pitch;
-                            alternator->Secondary->Yaw = yaw + 3.14f;
+                            viewAngleSwitch->Secondary->Pitch = pitch;
+                            viewAngleSwitch->Secondary->Yaw = yaw + 3.14f;
                         }
                         else {
                             // Uh oh, none are active.
@@ -235,7 +239,6 @@ namespace BF2VR {
         }
 
     }
-
 
     __int64 GameService::poseUpdateDetour(int a1, int a2, int a3, int a4, __int64 a5)
     {
@@ -298,7 +301,6 @@ namespace BF2VR {
 
         return true;
     }
-
 
     void GameService::updateBone(const char* boneName, Vec3 location, Vec4 rotation)
     {
@@ -375,5 +377,48 @@ namespace BF2VR {
             return;
         }
         pUISettings->drawEnable = enabled;
+    }
+
+    bool GameService::worldToScreen(Vec3 world, Vec3& screen) {
+
+        GameRenderer* pGameRenderer = GameRenderer::GetInstance();
+        RenderView* pRenderView = pGameRenderer->renderView;
+        if (!isValidPtr(pRenderView))
+        {
+            return false;
+        }
+
+        float mX = OpenXRService::eyeWidth / 2;
+        float mY = OpenXRService::eyeHeight / 2;
+
+        Matrix4 projection = pRenderView->viewProj;
+
+        float w =
+            projection.x.w * world.x +
+            projection.y.w * world.y +
+            projection.z.w * world.z +
+            projection.o.w;
+
+        if (w < 0.0001f)
+        {
+            screen.z = w;
+            return false;
+        }
+
+        float x =
+            projection.x.x * world.x +
+            projection.y.x * world.y +
+            projection.z.x * world.z +
+            projection.o.x;
+
+        float y =
+            projection.x.y * world.x +
+            projection.y.y * world.y +
+            projection.z.y * world.z +
+            projection.o.y;
+
+        screen.x = mX + mX * x / w;
+        screen.y = mY - mY * y / w;
+        screen.z = w;
     }
 }

@@ -48,9 +48,11 @@ namespace BF2VR {
 		static inline bool shouldStop = false;
 		static inline bool stopping = false;
 
-		static bool createXRInstanceWithExtensions();
+		static bool createXRInstance();
+		static bool createXRSession();
 		static bool beginXRSession();
 		static bool prepareActions();
+		static void consumeEvents();
 		static bool beginFrame();
 		static bool submitFrame(ID3D11Texture2D* pTexture);
 		static bool updateActions();

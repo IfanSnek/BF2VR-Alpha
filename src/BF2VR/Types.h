@@ -14,6 +14,11 @@
 #pragma once
 #include <format>
 
+struct Vec2 {
+    float x;
+    float y;
+};
+
 struct Vec3 {
     float x;
     float y;

@@ -26,10 +26,14 @@ namespace BF2VR {
 		static void updateCamera(Vec3 cameraLocation, Matrix4 cameraViewMatrix, float aimYaw, float aimPitch);
 
 		static void updateBone(const char* boneName, Vec3 location = Vec3(0, 0, 0), Vec4 rotation = Vec4(0, 0, 0, 1));
+
 		static bool applyBones();
+
 		static bool enableHooks();
 
 		static void setUIDrawState(bool enabled);
+
+		static bool worldToScreen(Vec3 world, Vec3& screen);
 
 	private:
 		typedef struct boneState

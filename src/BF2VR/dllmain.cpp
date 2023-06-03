@@ -48,14 +48,15 @@ DWORD __stdcall mainThread(HMODULE module)
     // Eye resolution stuff
     RECT desktop;
     GetWindowRect(ownWindow, &desktop);
-    OpenXRService::eyeWidth = desktop.right;
+    
+    = desktop.right;
     OpenXRService::eyeHeight = desktop.bottom;
 
     MH_Initialize();
 
     // Initialize OpenXR
     log("Attempting to initialize OpenXR ...");
-    if (!OpenXRService::createXRInstanceWithExtensions()) {
+    if (!OpenXRService::createXRInstance()) {
         error("Unable to initialize vr");
         shutdownNoHooks();
         return 1;
@@ -64,7 +65,7 @@ DWORD __stdcall mainThread(HMODULE module)
         success("Initialized OpenXR.");
     }
 
-    // Hook DirectX. This will eventually finalize OpenXR
+    // Hook DirectX. Present will be the main logic loop.
     log("Attempting to hook DirectX ...");
     if (!DirectXService::hookDirectX()) {
         error("Unable to Hook DirectX.");

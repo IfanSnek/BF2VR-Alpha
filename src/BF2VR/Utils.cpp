@@ -125,9 +125,9 @@ namespace BF2VR
         while (!OpenXRService::stopping) {
             Sleep(10);
         }
-        
-        OpenXRService::endXR();
+
         OpenXRService::isVRReady = false;
+        OpenXRService::endXR();
 
         log("Unhooking Camera");
         MH_DisableHook((LPVOID)OFFSETCAMERA);

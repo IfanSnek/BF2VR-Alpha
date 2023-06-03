@@ -126,6 +126,17 @@ public:
 	float aspectRatio; //0x00D0
 	float orthoWidth; //0x00D4
 	float orthoHeight; //0x00D8
+	char pad_00DC[276]; //0x00DC
+	Matrix4 viewMatrix; //0x01F0
+	Matrix4 viewMatrixTranspose;
+	Matrix4 viewMatrixInverse;
+	Matrix4 projectionMatrix;
+	Matrix4 viewMatrixAtOrigin;
+	Matrix4 projectionTranspose;
+	Matrix4 projectionInverse;
+	Matrix4 viewProj;
+	Matrix4 viewProjTranspose;
+	Matrix4 viewProjInverse;
 
 };
 
@@ -658,7 +669,7 @@ public:
 	char pad_0020[56]; //0x0020
 	uint32_t Team; //0x0058
 	char pad_005C[420]; //0x005C
-	class AttachedControllable* attachedControllable; //0x0200
+	class ClientSoldierEntity* attachedControllable; //0x0200
 	char pad_0208[8]; //0x0208
 	class ClientSoldierEntity* controlledControllable; //0x0210
 	char pad_0218[1704]; //0x0218
