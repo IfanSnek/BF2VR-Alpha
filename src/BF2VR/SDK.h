@@ -126,6 +126,17 @@ public:
 	float aspectRatio; //0x00D0
 	float orthoWidth; //0x00D4
 	float orthoHeight; //0x00D8
+	char pad_00DC[276]; //0x00DC
+	Matrix4 viewMatrix; //0x01F0
+	Matrix4 viewMatrixTranspose;
+	Matrix4 viewMatrixInverse;
+	Matrix4 projectionMatrix;
+	Matrix4 viewMatrixAtOrigin;
+	Matrix4 projectionTranspose;
+	Matrix4 projectionInverse;
+	Matrix4 viewProj;
+	Matrix4 viewProjTranspose;
+	Matrix4 viewProjInverse;
 
 };
 

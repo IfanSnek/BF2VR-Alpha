@@ -240,7 +240,6 @@ namespace BF2VR {
 
     }
 
-
     __int64 GameService::poseUpdateDetour(int a1, int a2, int a3, int a4, __int64 a5)
     {
         __int64 toReturn = poseUpdateOriginal(a1, a2, a3, a4, a5);
@@ -302,7 +301,6 @@ namespace BF2VR {
 
         return true;
     }
-
 
     void GameService::updateBone(const char* boneName, Vec3 location, Vec4 rotation)
     {
@@ -379,5 +377,48 @@ namespace BF2VR {
             return;
         }
         pUISettings->drawEnable = enabled;
+    }
+
+    bool GameService::worldToScreen(Vec3 world, Vec3& screen) {
+
+        GameRenderer* pGameRenderer = GameRenderer::GetInstance();
+        RenderView* pRenderView = pGameRenderer->renderView;
+        if (!isValidPtr(pRenderView))
+        {
+            return false;
+        }
+
+        float mX = OpenXRService::eyeWidth / 2;
+        float mY = OpenXRService::eyeHeight / 2;
+
+        Matrix4 projection = pRenderView->viewProj;
+
+        float w =
+            projection.x.w * world.x +
+            projection.y.w * world.y +
+            projection.z.w * world.z +
+            projection.o.w;
+
+        if (w < 0.0001f)
+        {
+            screen.z = w;
+            return false;
+        }
+
+        float x =
+            projection.x.x * world.x +
+            projection.y.x * world.y +
+            projection.z.x * world.z +
+            projection.o.x;
+
+        float y =
+            projection.x.y * world.x +
+            projection.y.y * world.y +
+            projection.z.y * world.z +
+            projection.o.y;
+
+        screen.x = mX + mX * x / w;
+        screen.y = mY - mY * y / w;
+        screen.z = w;
     }
 }

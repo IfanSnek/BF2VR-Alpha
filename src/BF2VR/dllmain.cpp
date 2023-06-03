@@ -48,7 +48,8 @@ DWORD __stdcall mainThread(HMODULE module)
     // Eye resolution stuff
     RECT desktop;
     GetWindowRect(ownWindow, &desktop);
-    OpenXRService::eyeWidth = desktop.right;
+    
+    = desktop.right;
     OpenXRService::eyeHeight = desktop.bottom;
 
     MH_Initialize();
