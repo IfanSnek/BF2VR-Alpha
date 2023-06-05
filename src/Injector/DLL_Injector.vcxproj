@@ -154,9 +154,6 @@
   <ItemGroup>
     <ResourceCompile Include="DLL_Injector.rc" />
   </ItemGroup>
-  <ItemGroup>
-    <Image Include="..\..\assets\icon.png" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

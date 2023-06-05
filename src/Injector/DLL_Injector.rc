@@ -50,7 +50,7 @@ END
 // PNG
 //
 
-MAINICON ICON "..\\..\\assets\\icon.ico"
+MAINICON ICON "..\\..\\assets\\icon-v2.ico"
 
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////

@@ -388,8 +388,8 @@ namespace BF2VR {
             return false;
         }
 
-        float mX = OpenXRService::eyeWidth / 2;
-        float mY = OpenXRService::eyeHeight / 2;
+        float mX = OpenXRService::eyeWidth / 2.f;
+        float mY = OpenXRService::eyeHeight / 2.f;
 
         Matrix4 projection = pRenderView->viewProj;
 
